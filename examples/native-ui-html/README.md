@@ -5,7 +5,7 @@ A plain HTML example with ordinary buttons and an application-owned rail. Home/d
 From the repository root, build the native package, then install and run this example:
 
 ```sh
-npm run build -w @rdlabo/capacitor-native-ui
+npm run build
 cd examples/native-ui-html
 npm install
 npm start

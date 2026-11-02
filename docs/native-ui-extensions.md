@@ -103,6 +103,8 @@ This uses WebKit's internal overflow-view hierarchy without private class names.
 
 ## 2a. Register a SwiftUI View on iOS
 
+For CocoaPods projects, first complete the [Engine Podfile setup](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/setup#4-build-sync-and-run). SwiftPM resolves Engine automatically.
+
 Run `npx cap sync ios` after installing the plugin, then add a Swift file to the application's Xcode target. Import `NativeUIPlugin`, the module supplied by `@rdlabo/capacitor-native-ui`. Keep your existing SPM or CocoaPods integration.
 
 ```swift

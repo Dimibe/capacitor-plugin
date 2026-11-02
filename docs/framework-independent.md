@@ -76,6 +76,8 @@ For a custom HTML theme, declare `color-scheme: light` or `color-scheme: dark` i
 
 ## 4. Build and run on iOS
 
+For CocoaPods projects, first complete the [Engine Podfile setup](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/setup#4-build-sync-and-run). SwiftPM resolves Engine automatically.
+
 Build your Web app, run `npx cap sync ios`, and launch the iOS project from Xcode. With the step 3 configuration, Add renders at its source position and invokes its original click handler. Back requests the device-reported native rail when available; connect the device placement below to keep Web spacing in sync. In a browser, the same button remains an ordinary Web button. Unmarked HTML remains unchanged.
 
 If a button stays on the Web on supported iOS, check that it is visible within the configured root, has an accessible name, and that the direct plugin dependency was synced and the iOS app rebuilt.
