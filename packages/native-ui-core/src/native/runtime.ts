@@ -399,31 +399,30 @@ export const createRuntime = async (
     }
     const overlayVisible = overlayOpen();
     if (overlayVisible) navigation.clear();
-    // Web rail projections also hide their originals. Measure those sources
-    // without releasing the visible clones before native acknowledges ownership.
+    const readable = (element: HTMLElement) =>
+      inVerticalBarsSurface(element) &&
+      !(topModal(doc) && modalPreparing(topModal(doc)!)) &&
+      !verticalBarsPages.isDeparted(element, true) &&
+      (!blocked(element) || (overlayVisible && isVerticalBarsSource(element)));
     const measurableSources = new Set([
       ...sources.keys(),
       ...Array.from(scope.querySelectorAll<HTMLElement>('[data-native-ui-snapshot-source]')),
       ...Array.from(scope.querySelectorAll<HTMLElement>(`[${marker}], [data-native-ui-web-source]`)).filter(isVerticalBarsSource),
     ]);
-    const candidates = navigation.measure(() =>
-      unprojected([...measurableSources].filter(inVerticalBarsSurface), () =>
-        search
-          .decorate(
-            Array.from(scope.querySelectorAll<HTMLElement>(discovery))
-              .filter(
-                (element) =>
-                  inVerticalBarsSurface(element) &&
-                  !(topModal(doc) && modalPreparing(topModal(doc)!)) &&
-                  !verticalBarsPages.isDeparted(element, true) &&
-                  (!blocked(element) || (overlayVisible && isVerticalBarsSource(element))),
-              )
-              .map(readEnabledCandidate)
-              .filter((candidate): candidate is Candidate => !!candidate),
-            blocked,
-          )
-          .filter((candidate) => !rejected.has(candidate.element) || rejected.get(candidate.element) !== signature(candidate, false)),
-      ),
+    const candidates = navigation.measure(
+      () =>
+        unprojected([...measurableSources].filter(readable), () =>
+          search
+            .decorate(
+              Array.from(scope.querySelectorAll<HTMLElement>(discovery))
+                .filter(readable)
+                .map(readEnabledCandidate)
+                .filter((candidate): candidate is Candidate => !!candidate),
+              blocked,
+            )
+            .filter((candidate) => !rejected.has(candidate.element) || rejected.get(candidate.element) !== signature(candidate, false)),
+        ),
+      readable,
     );
     // An extension owns its entire source subtree. Never project a nested built-in twice.
     const extensionSources = candidates.filter((candidate) => candidate.control.kind === 'extension');
@@ -1077,15 +1076,18 @@ export const createRuntime = async (
     page.classList.remove('ion-page-hidden', 'ion-page-invisible');
     page.style.setProperty('pointer-events', 'auto', 'important');
     try {
-      const candidates = navigation.measure(() =>
-        unprojected(sources.keys(), () =>
-          // Only fixed toolbar controls participate in this handoff. Avoid measuring
-          // content controls that will be discarded by horizontalToolbar below.
-          Array.from(page.querySelectorAll<HTMLElement>(discovery))
-            .filter(inFixedToolbar)
-            .map(readEnabledCandidate)
-            .filter((candidate): candidate is Candidate => !!candidate && horizontalToolbar(candidate)),
-        ),
+      const withinPage = (element: HTMLElement) => page.contains(element) || element.contains(page);
+      const candidates = navigation.measure(
+        () =>
+          unprojected(Array.from(sources.keys()).filter(withinPage), () =>
+            // Only fixed toolbar controls participate in this handoff. Avoid measuring
+            // content controls that will be discarded by horizontalToolbar below.
+            Array.from(page.querySelectorAll<HTMLElement>(discovery))
+              .filter(inFixedToolbar)
+              .map(readEnabledCandidate)
+              .filter((candidate): candidate is Candidate => !!candidate && horizontalToolbar(candidate)),
+          ),
+        withinPage,
       );
       assignToolbarTransitionIds(candidates);
       navigation.current.destination = candidates;

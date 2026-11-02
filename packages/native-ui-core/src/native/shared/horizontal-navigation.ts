@@ -73,8 +73,8 @@ export const createHorizontalNavigation = () => {
         }
       }
     },
-    measure<T>(read: () => T): T {
-      const masked = [...(current?.masked ?? [])];
+    measure<T>(read: () => T, includes: (element: HTMLElement) => boolean = () => true): T {
+      const masked = [...(current?.masked ?? [])].filter(includes);
       masked.forEach((element) => element.removeAttribute(navigationMarker));
       try {
         return read();
