@@ -4,10 +4,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/webview-native-ui/capacitor.git"
+    "url": "git+https://github.com/webview-native-ui/capacitor-plugin.git"
   },
   "bugs": {
-    "url": "https://github.com/webview-native-ui/capacitor/issues"
+    "url": "https://github.com/webview-native-ui/capacitor-plugin/issues"
   },
   "type": "module",
   "name": "@rdlabo/capacitor-native-ui",

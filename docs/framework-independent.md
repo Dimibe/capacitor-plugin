@@ -122,4 +122,4 @@ Currently the HTML adapter supports buttons and back buttons. Arbitrary HTML tab
 
 ## Example
 
-The [plain HTML example](https://github.com/webview-native-ui/capacitor/tree/main/examples/native-ui-html) demonstrates Add, routerless Home/Details/Back navigation, optional Web rail projection and cleanup. It uses no Ionic or theme CSS.
+The [plain HTML example](https://github.com/webview-native-ui/capacitor-plugin/tree/main/examples/native-ui-html) demonstrates Add, routerless Home/Details/Back navigation, optional Web rail projection and cleanup. It uses no Ionic or theme CSS.

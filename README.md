@@ -100,6 +100,6 @@ From a migrated theme checkout, run `npm run test:native-candidate -- /tmp/rdlab
 
 The plugin has an independent version from the theme. Run `npm run release` from an up-to-date main when authorized to publish. The `capacitor-vVERSION` tag workflow publishes only this plugin (`next` for prereleases, `latest` for stable versions).
 
-Before the first release, configure the npm trusted publisher for `webview-native-ui/capacitor`, workflow `release.yml`, environment `npm`. Configure that GitHub environment's reviewer policy as appropriate. Already-published versions cannot be republished; choose a new version for the first release from this repository.
+Before the first release, configure the npm trusted publisher for `webview-native-ui/capacitor-plugin`, workflow `release.yml`, environment `npm`. Configure that GitHub environment's reviewer policy as appropriate. Already-published versions cannot be republished; choose a new version for the first release from this repository.
 
 This repository was extracted from `webview-native-ui/ionic-theme-ios27` commit `1831bde5`. Earlier history remains in that repository.
