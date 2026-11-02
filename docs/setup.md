@@ -139,7 +139,7 @@ These hooks manage the app's lifetime, not individual page transitions. Configur
 
 ## 3. Coordinate navigation
 
-For optional Ionic animation coordination, install `@rdlabo/ionic-theme-ios27` and update Native UI together so their versions match. Configure navigation before Ionic initializes. Its adapter can retain Ionic's default transitions without loading theme CSS:
+For optional Ionic animation coordination, install `@rdlabo/ionic-theme-ios27` with a compatible Native UI version. The packages are versioned independently; use the Native UI peer range declared by the theme. Configure navigation before Ionic initializes. Its adapter can retain Ionic's default transitions without loading theme CSS:
 
 ```sh
 npm install @rdlabo/ionic-theme-ios27 @rdlabo/capacitor-native-ui @erkamyaman/capacitor-foldable
