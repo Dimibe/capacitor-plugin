@@ -1,0 +1,51 @@
+name: Theme integration
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      theme_ref:
+        description: Migrated theme commit or branch to test
+        default: main
+        required: true
+permissions:
+  contents: read
+jobs:
+  demo:
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.58.2-noble
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: plugin
+          persist-credentials: false
+      - uses: actions/checkout@v5
+        with:
+          repository: webview-native-ui/ionic-theme-ios27
+          ref: ${{ inputs.theme_ref || 'main' }}
+          path: theme
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - run: npm ci && npm run build
+        working-directory: plugin
+      - name: Pack candidate
+        working-directory: plugin
+        run: npm pack --workspace packages/capacitor-native-ui --ignore-scripts --pack-destination "$RUNNER_TEMP"
+      - name: Test real theme demo against candidate archive
+        working-directory: theme
+        run: npm run test:native-candidate -- "$RUNNER_TEMP"/rdlabo-capacitor-native-ui-*.tgz --e2e
+        env:
+          CI: 'true'
+      - uses: actions/upload-artifact@v5
+        if: failure()
+        with:
+          name: theme-integration-diagnostics
+          path: |
+            /tmp/theme-native-candidate-*/demo/test-results
+            /tmp/theme-native-candidate-*/demo/playwright-report

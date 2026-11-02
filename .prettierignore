@@ -1,0 +1,9 @@
+node_modules
+dist
+www
+demo/ios/App/App/public
+demo/playwright-report
+demo/test-results
+
+packages/capacitor-native-ui/android/build/
+packages/capacitor-native-ui/android/.gradle/

@@ -1,0 +1,92 @@
+{
+  "version": "2.1.0",
+  "author": "Masahiko Sakakibara <sakakibara@rdlabo.jp>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/webview-native-ui/capacitor.git",
+    "directory": "packages/capacitor-native-ui"
+  },
+  "bugs": {
+    "url": "https://github.com/webview-native-ui/capacitor/issues"
+  },
+  "type": "module",
+  "name": "@rdlabo/capacitor-native-ui",
+  "description": "Web-owned native UI projection for Capacitor",
+  "keywords": [
+    "capacitor",
+    "plugin",
+    "native",
+    "ios",
+    "android"
+  ],
+  "main": "./dist/native/index.js",
+  "module": "./dist/native/index.js",
+  "types": "./dist/native/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/native/index.d.ts",
+      "import": "./dist/native/index.js"
+    },
+    "./vertical-bars": {
+      "types": "./dist/vertical-bars.d.ts",
+      "import": "./dist/vertical-bars.js"
+    },
+    "./integration": {
+      "types": "./dist/native-integration/index.d.ts",
+      "import": "./dist/native-integration/index.js"
+    },
+    "./package.json": "./package.json",
+    "./core": {
+      "types": "./dist/core.d.ts",
+      "import": "./dist/core.js"
+    }
+  },
+  "files": [
+    "android/src/main/",
+    "android/build.gradle",
+    "android/proguard-rules.pro",
+    "dist/",
+    "src/",
+    "ios/Sources",
+    "ios/Tests",
+    "Package.swift",
+    "RdlaboCapacitorNativeUi.podspec",
+    "LICENSE",
+    "README.md",
+    "docs"
+  ],
+  "scripts": {
+    "build": "npm run clean && npm run docgen && tsc --noEmit && rdlabo-build-theme",
+    "clean": "rm -rf dist",
+    "docgen": "docgen --project tsconfig.docgen.json --api NativeUIHandle --output-readme docs/native-ui.md && docgen --project tsconfig.docgen.json --api VerticalControlAreaHandle --output-readme docs/vertical-bars.md",
+    "prepublishOnly": "npm run build"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "@capacitor/core": ">=8.0.0 <9",
+    "@ionic/core": ">=8.8.1 <10"
+  },
+  "capacitor": {
+    "ios": {
+      "src": "ios"
+    },
+    "android": {
+      "src": "android"
+    }
+  },
+  "peerDependenciesMeta": {
+    "@ionic/core": {
+      "optional": true
+    },
+    "@capacitor/core": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@rdlabo/ionic-theme-utils": "0.1.5",
+    "@webview-native-ui/engine": "^1.0.0"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "name": "capacitor-native-ui-workspace",
+  "version": "2.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/capacitor-native-ui"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "test": "vitest run",
+    "test:packages": "node scripts/verify-packages.mjs",
+    "test:esm": "node scripts/verify-packages.mjs --esm",
+    "lint": "prettier --check \"./**/*.{scss,ts,md}\" && prettier --parser angular --check \"./**/*.html\"",
+    "fmt": "prettier --write \"./**/*.{scss,ts,md}\" && prettier --parser angular --write \"./**/*.html\"",
+    "pack:packages": "npm pack --workspaces --ignore-scripts",
+    "release": "np --no-tests --no-publish --branch main"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/core": "^8.5.2",
+    "@rdlabo/capacitor-docgen": "^0.4.1",
+    "@rdlabo/ionic-theme-utils": "0.1.5",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.1",
+    "np": "^10.2.0",
+    "prettier": "^3.6.2",
+    "tsdown": "^0.23.0",
+    "typescript": "^5.9.3",
+    "esbuild": "0.28.1",
+    "@ionic/core": "8.8.19",
+    "@capacitor/ios": "^8.5.2",
+    "vitest": "^4.0.0",
+    "jsdom": "^26.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/webview-native-ui/capacitor.git"
+  }
+}

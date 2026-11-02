@@ -1,0 +1,30 @@
+name: Plugin CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  plugin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+      - run: npm test
+      - run: npm run test:esm
+      - run: npm run test:packages
+      - run: npm ci && npm run build
+        working-directory: examples/native-ui-html
+      - run: mkdir -p artifacts && npm pack --workspaces --ignore-scripts --pack-destination artifacts
+      - uses: actions/upload-artifact@v5
+        with:
+          name: capacitor-native-ui-${{ github.sha }}
+          path: artifacts/*.tgz

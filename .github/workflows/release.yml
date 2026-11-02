@@ -1,0 +1,47 @@
+name: Release
+on:
+  push:
+    tags: ['capacitor-v*']
+permissions:
+  contents: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: npm
+    concurrency:
+      group: npm-capacitor-release
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          cache: npm
+      - run: npm ci
+      - name: Validate release version
+        run: |
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+          const version = process.env.GITHUB_REF_NAME.replace(/^capacitor-v/, '');
+          assert.match(version, /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/);
+          assert.equal(JSON.parse(readFileSync('package.json')).version, version);
+          JS
+          npm version "${GITHUB_REF_NAME#capacitor-v}" --workspaces --no-git-tag-version --ignore-scripts --allow-same-version
+      - run: npm run build
+      - run: npm test
+      - run: npm run test:esm
+      - run: npm run test:packages
+      - name: Verify Engine native dependency
+        run: sh scripts/verify-engine-maven.sh "$(node -p "require('./packages/capacitor-native-ui/package.json').dependencies['@webview-native-ui/engine'].slice(1)")"
+      - name: Publish plugin
+        run: |
+          VERSION=${GITHUB_REF_NAME#capacitor-v}
+          case "$VERSION" in *-*) DIST_TAG=next ;; *) DIST_TAG=latest ;; esac
+          npm publish --workspace packages/capacitor-native-ui --ignore-scripts --provenance --access public --tag "$DIST_TAG"
