@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from 'vitest';
-import { createVerticalNavigation } from '../packages/capacitor-native-ui/src/native/shared/vertical-navigation';
+import { createVerticalNavigation } from '../src/native/shared/vertical-navigation';
 
 afterEach(() => document.body.replaceChildren());
 const page = (owner = document.body) => owner.appendChild(document.createElement('main'));

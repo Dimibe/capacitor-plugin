@@ -1,8 +1,8 @@
 import { afterEach, expect, test } from 'vitest';
-import { readCandidate, selector } from '../packages/capacitor-native-ui/src/native/components';
-import { prehideVerticalBarsToolbarSources } from '../packages/capacitor-native-ui/src/native/prehide';
-import { verticalBarsOwned } from '../packages/capacitor-native-ui/src/native/shared/dom';
-import type { VerticalControlAreaOptions } from '../packages/capacitor-native-ui/src/native/definitions';
+import { readCandidate, selector } from '../src/native/components';
+import { prehideVerticalBarsToolbarSources } from '../src/native/prehide';
+import { verticalBarsOwned } from '../src/native/shared/dom';
+import type { VerticalControlAreaOptions } from '../src/native/definitions';
 
 afterEach(() => document.body.replaceChildren());
 

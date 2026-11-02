@@ -1,7 +1,7 @@
 import { afterEach, expect, test } from 'vitest';
-import { assignToolbarTransitionIds } from '../packages/capacitor-native-ui/src/native/shared/transition-identity';
-import type { Candidate } from '../packages/capacitor-native-ui/src/native/shared/candidate';
-import type { NativeUIItem } from '../packages/capacitor-native-ui/src/native/definitions';
+import { assignToolbarTransitionIds } from '../src/native/shared/transition-identity';
+import type { Candidate } from '../src/native/shared/candidate';
+import type { NativeUIItem } from '../src/native/definitions';
 
 let sequence = 0;
 const mount = (markup: string): Candidate[] => {

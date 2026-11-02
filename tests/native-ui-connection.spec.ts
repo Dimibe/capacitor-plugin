@@ -1,6 +1,6 @@
 import { afterEach, expect, test, vi } from 'vitest';
-import { createNativeConnection } from '../packages/capacitor-native-ui/src/native/shared/connection';
-import type { NativeUIConnectionState, NativeUIPlugin } from '../packages/capacitor-native-ui/src/native/definitions';
+import { createNativeConnection } from '../src/native/shared/connection';
+import type { NativeUIConnectionState, NativeUIPlugin } from '../src/native/definitions';
 
 let connection: ReturnType<typeof createNativeConnection>;
 afterEach(() => {

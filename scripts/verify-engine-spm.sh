@@ -4,10 +4,10 @@ set -euo pipefail
 # dump-package checks manifest resolution without fetching or executing remote code.
 ENGINE_PROBE=$(mktemp -d)
 trap 'rm -rf "$ENGINE_PROBE"' EXIT
-cp packages/capacitor-native-ui/Package.swift "$ENGINE_PROBE/Package.swift"
-cp packages/capacitor-native-ui/package.json "$ENGINE_PROBE/package.json"
+cp Package.swift "$ENGINE_PROBE/Package.swift"
+cp package.json "$ENGINE_PROBE/package.json"
 mkdir -p "$ENGINE_PROBE/ios/Sources/NativeUIPlugin" "$ENGINE_PROBE/ios/Tests/NativeUIPluginTests"
-ENGINE_REQUIREMENT=$(node -p "require('./packages/capacitor-native-ui/package.json').dependencies['@webview-native-ui/engine']")
+ENGINE_REQUIREMENT=$(node -p "require('./package.json').dependencies['@webview-native-ui/engine']")
 swift package --package-path "$ENGINE_PROBE" dump-package > "$ENGINE_PROBE/manifest.json"
 node --input-type=module - "$ENGINE_PROBE/manifest.json" "$ENGINE_REQUIREMENT" <<'JS'
 import assert from 'node:assert/strict';

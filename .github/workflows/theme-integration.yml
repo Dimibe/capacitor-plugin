@@ -26,7 +26,8 @@ jobs:
       - uses: actions/checkout@v5
         with:
           repository: webview-native-ui/ionic-theme-ios27
-          ref: ${{ inputs.theme_ref || 'main' }}
+          # Compatible demo baseline; update after the theme migration is merged.
+          ref: ${{ inputs.theme_ref || 'c20261e25775199cd4c9e40c86557b3f142a9895' }}
           path: theme
           persist-credentials: false
       - uses: actions/setup-node@v5
@@ -36,7 +37,7 @@ jobs:
         working-directory: plugin
       - name: Pack candidate
         working-directory: plugin
-        run: npm pack --workspace packages/capacitor-native-ui --ignore-scripts --pack-destination "$RUNNER_TEMP"
+        run: npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP"
       - name: Test real theme demo against candidate archive
         working-directory: theme
         run: npm run test:native-candidate -- "$RUNNER_TEMP"/rdlabo-capacitor-native-ui-*.tgz --e2e

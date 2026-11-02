@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import type { NativeUIProjectionState } from '../packages/capacitor-native-ui/src/native/shared/covered-source';
+import type { NativeUIProjectionState } from '../src/native/shared/covered-source';
 
 /** Projection tests supply the read-only state they consume, not the engine's internals. */
 export const mockSnapshotOwnership = (scope: NativeUIProjectionState) => {

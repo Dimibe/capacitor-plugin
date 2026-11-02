@@ -1,9 +1,9 @@
 import { afterEach, expect, onTestFinished, test, vi } from 'vitest';
-import { observeVerticalBarsModals } from '../packages/capacitor-native-ui/src/native/shared/modal';
-import { createRuntime } from '../packages/capacitor-native-ui/src/native/runtime';
-import type { NativeUIConnection } from '../packages/capacitor-native-ui/src/native/shared/connection';
-import { suspendNativeUI } from '../packages/capacitor-native-ui/src/native-integration';
-import type { NativeUIPlugin, NativeUISnapshot, NativeUIRuntimeHandle } from '../packages/capacitor-native-ui/src/native/definitions';
+import { observeVerticalBarsModals } from '../src/native/shared/modal';
+import { createRuntime } from '../src/native/runtime';
+import type { NativeUIConnection } from '../src/native/shared/connection';
+import { suspendNativeUI } from '../src/native-integration';
+import type { NativeUIPlugin, NativeUISnapshot, NativeUIRuntimeHandle } from '../src/native/definitions';
 
 let handle: NativeUIRuntimeHandle | undefined;
 afterEach(async () => {

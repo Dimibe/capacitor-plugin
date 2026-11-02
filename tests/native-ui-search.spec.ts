@@ -1,7 +1,7 @@
 import { afterEach, expect, test, vi } from 'vitest';
-import { createSearchSupport } from '../packages/capacitor-native-ui/src/native/components/searchable-tabs';
-import { registerNativeSearch } from '../packages/capacitor-native-ui/src/native-integration';
-import { createCandidate } from '../packages/capacitor-native-ui/src/native/shared/candidate';
+import { createSearchSupport } from '../src/native/components/searchable-tabs';
+import { registerNativeSearch } from '../src/native-integration';
+import { createCandidate } from '../src/native/shared/candidate';
 
 afterEach(() => {
   document.body.replaceChildren();

@@ -1,6 +1,6 @@
 import { afterEach, expect, test, vi } from 'vitest';
-import { prepareSheetLayout } from '../packages/capacitor-native-ui/src/native/shared/modal-animation';
-import { releaseSheetBackdropGesture } from '../packages/capacitor-native-ui/src/native/shared/modal';
+import { prepareSheetLayout } from '../src/native/shared/modal-animation';
+import { releaseSheetBackdropGesture } from '../src/native/shared/modal';
 
 afterEach(() => {
   vi.unstubAllGlobals();

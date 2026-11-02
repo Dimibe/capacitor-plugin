@@ -1,17 +1,12 @@
 import { mockSnapshotOwnership } from './snapshot-scope-fixture';
 import { beforeEach } from 'vitest';
-import { getProjectionState } from '../packages/capacitor-native-ui/src/native/shared/covered-source';
+import { getProjectionState } from '../src/native/shared/covered-source';
 const projectionState = getProjectionState(document);
 const { sourcesChangedEvent } = projectionState;
 import { afterEach, expect, test, vi, onTestFinished } from 'vitest';
-import { createHTMLWebProjection, readHTMLControl } from '../packages/capacitor-native-ui/src/native/html';
-import { createRuntime } from '../packages/capacitor-native-ui/src/native/runtime';
-import type {
-  NativeUIRuntimeHandle,
-  NativeUIRuntimeOptions,
-  NativeUIPlugin,
-  NativeUISnapshot,
-} from '../packages/capacitor-native-ui/src/native/definitions';
+import { createHTMLWebProjection, readHTMLControl } from '../src/native/html';
+import { createRuntime } from '../src/native/runtime';
+import type { NativeUIRuntimeHandle, NativeUIRuntimeOptions, NativeUIPlugin, NativeUISnapshot } from '../src/native/definitions';
 
 let owners: Set<HTMLElement>, visibleOwners: Set<HTMLElement>, preparedOwners: Set<HTMLElement>;
 beforeEach(() => {
@@ -219,7 +214,7 @@ test('native bridge uses the same standard model, revalidates actions, and retir
 });
 
 test('public shell changes Vertical Bars without restarting and restores source behavior', async () => {
-  const { enableNativeUI } = await import('../packages/capacitor-native-ui/src/core');
+  const { enableNativeUI } = await import('../src/core');
   const { source, options } = mount('<button data-native-ui="button" data-native-ui-placement="rail">Add</button>');
   const host = options.rail!.host;
   const clicks = vi.fn();
@@ -247,7 +242,7 @@ test('public shell changes Vertical Bars without restarting and restores source 
 });
 
 test('rail availability gates explicit HTML, but selection defaults do not', async () => {
-  const { enableNativeUI } = await import('../packages/capacitor-native-ui/src/core');
+  const { enableNativeUI } = await import('../src/core');
   const { source, options } = mount('<button data-native-ui="button" data-native-ui-placement="rail">Add</button>');
   const host = options.rail!.host;
   const shell = await enableNativeUI({
@@ -351,14 +346,14 @@ test('markForCheck batches property-only changes, skips equal snapshots, and sto
 });
 
 test('extension images share SVG validation and rasterization without asynchronous readers', async () => {
-  const { readExtension } = await import('../packages/capacitor-native-ui/src/native/extensions');
+  const { readExtension } = await import('../src/native/extensions');
   const { root } = mount('<section data-counter><svg width="16" height="16"><path d="M0 0h16v16z" /></svg></section>');
   const source = root.querySelector<HTMLElement>('section')!;
   const svg = source.querySelector('svg')!;
   const definition = {
     name: 'artwork',
     selector: '[data-counter]',
-    read: (element: HTMLElement, context: import('../packages/capacitor-native-ui/src/core').NativeUIReadContext) => {
+    read: (element: HTMLElement, context: import('../src/core').NativeUIReadContext) => {
       const icon = context.image(element.querySelector('svg'), { template: true });
       return { props: { icon: icon ? { ...icon } : null } };
     },
@@ -378,7 +373,7 @@ test('extension images share SVG validation and rasterization without asynchrono
 });
 
 test('ionic.auto false preserves explicit ion-button rails, live toggles, and source clicks', async () => {
-  const { enableNativeUI } = await import('../packages/capacitor-native-ui/src/core');
+  const { enableNativeUI } = await import('../src/core');
   const { root, options } = mount(
     '<ion-button data-native-ui="button" data-native-ui-placement="rail">Explicit</ion-button><ion-button>Automatic</ion-button>',
   );
@@ -464,7 +459,7 @@ test.each([
   { controls: 'horizontalOnly' as const },
   { controls: { button: false, buttonGroup: true } },
 ])('explicit projection survives selection defaults and automatic discovery settings: %j', async (settings) => {
-  const { enableNativeUI } = await import('../packages/capacitor-native-ui/src/core');
+  const { enableNativeUI } = await import('../src/core');
   const { root, options } = mount('<button data-native-ui="button" data-native-ui-placement="rail">Explicit</button>');
   const shell = await enableNativeUI({
     ...settings,
@@ -674,7 +669,7 @@ test('native popover retention skips image handoff; a Web fallback reuses it wit
 });
 
 test('older Native binaries keep modal rail projection and geometry updates during dragging', async () => {
-  const { observeVerticalBarsModals, movingModal } = await import('../packages/capacitor-native-ui/src/native/shared/modal');
+  const { observeVerticalBarsModals, movingModal } = await import('../src/native/shared/modal');
   const { source, options } = mount(
     '<ion-app class="ios-theme-vertical-bars"><ion-modal><button data-native-ui="button" data-native-ui-placement="rail">Save</button></ion-modal></ion-app>',
   );
@@ -767,7 +762,7 @@ test('Native rail acquisition publishes owner and member attributes before notif
 });
 
 test.each([0.00001525878906, 1])('modal entry accepts round-off but resynchronizes a real size change (%s px)', async (delta) => {
-  const { observeVerticalBarsModals, modalPresentation } = await import('../packages/capacitor-native-ui/src/native/shared/modal');
+  const { observeVerticalBarsModals, modalPresentation } = await import('../src/native/shared/modal');
   const { source, options } = mount(
     '<ion-app class="ios-theme-vertical-bars"><ion-modal><button data-native-ui="button" data-native-ui-placement="rail">Save</button></ion-modal></ion-app>',
   );
@@ -932,7 +927,7 @@ test.each([0, 0.25, 0.5])('sheet breakpoint %s keeps dismissal on the acknowledg
 });
 
 test.each([2, 3])('%s modal surfaces keep independent images through nesting, dragging and dismissal', async (depth) => {
-  const { observeVerticalBarsModals, movingModal } = await import('../packages/capacitor-native-ui/src/native/shared/modal');
+  const { observeVerticalBarsModals, movingModal } = await import('../src/native/shared/modal');
   const { source, options } = mount(
     '<ion-app class="ios-theme-vertical-bars"><ion-modal><button data-native-ui="button" data-native-ui-placement="rail">Save</button></ion-modal></ion-app>',
   );

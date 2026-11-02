@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { defineNativeUI, enableNativeUI } from '../packages/capacitor-native-ui/src/native';
+import { defineNativeUI, enableNativeUI } from '../src/native';
 
 const counter = () => defineNativeUI({ name: 'app.counter', selector: '[data-counter]', read: () => ({ props: { count: 0 } }) });
 

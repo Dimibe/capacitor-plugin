@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-import type { NativeUIHandle, NativeUISnapshot } from '../packages/capacitor-native-ui/src/native/definitions';
+import type { NativeUIHandle, NativeUISnapshot } from '../src/native/definitions';
 
 const bridge = vi.hoisted(() => ({
   available: true,
@@ -14,7 +14,7 @@ vi.mock('@capacitor/core', () => ({
   Capacitor: { getPlatform: () => 'android', isPluginAvailable: () => bridge.available },
   registerPlugin: () => bridge,
 }));
-import { enableNativeUI } from '../packages/capacitor-native-ui/src/core';
+import { enableNativeUI } from '../src/core';
 
 let shell: NativeUIHandle | undefined;
 let root: HTMLElement;

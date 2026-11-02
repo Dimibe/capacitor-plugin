@@ -1,11 +1,6 @@
 import { afterEach, expect, test } from 'vitest';
-import {
-  inFixedToolbar,
-  verticalBarsActionCandidate,
-  verticalBarsBackCandidate,
-  verticalBarsOwned,
-} from '../packages/capacitor-native-ui/src/native/shared/dom';
-import { prehideVerticalBarsToolbarSources } from '../packages/capacitor-native-ui/src/native/prehide';
+import { inFixedToolbar, verticalBarsActionCandidate, verticalBarsBackCandidate, verticalBarsOwned } from '../src/native/shared/dom';
+import { prehideVerticalBarsToolbarSources } from '../src/native/prehide';
 
 let stop: (() => void) | undefined;
 afterEach(() => {

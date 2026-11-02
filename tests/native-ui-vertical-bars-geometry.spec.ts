@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from 'vitest';
-import { alignVerticalBarClone, rememberVerticalBarFrame } from '../packages/capacitor-native-ui/src/native/shared/vertical-bars-geometry';
+import { alignVerticalBarClone, rememberVerticalBarFrame } from '../src/native/shared/vertical-bars-geometry';
 
 afterEach(() => document.body.replaceChildren());
 

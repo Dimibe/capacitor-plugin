@@ -5,13 +5,13 @@ import { cpSync, mkdtempSync, rmSync, existsSync, mkdirSync, symlinkSync, readFi
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
-// Validate the archives consumers install, not the workspace symlinks.
+// Validate the archives consumers install, not the local package links.
 const dir = mkdtempSync(join(tmpdir(), 'ionic-theme-packages-'));
-const sourceFiles = ['package.json', 'package-lock.json', 'packages/capacitor-native-ui/package.json'];
+const sourceFiles = ['package.json', 'package-lock.json'];
 const originals = sourceFiles.map((file) => readFileSync(file, 'utf8'));
 try {
   const packed = Object.values(JSON.parse(
-    execFileSync('npm', ['pack', '--workspaces', '--ignore-scripts', '--json', '--pack-destination', dir], { encoding: 'utf8' }),
+    execFileSync('npm', ['pack', '--ignore-scripts', '--json', '--pack-destination', dir], { encoding: 'utf8' }),
   ));
   assert.equal(packed.length, 1);
   sourceFiles.forEach((file, index) => assert.equal(readFileSync(file, 'utf8'), originals[index], `${file} changed while packing`));
@@ -30,7 +30,7 @@ try {
     symlinkSync(join(dir, 'node_modules'), join(packageRoot, 'node_modules'), 'dir');
     const files = new Set(archive.files.map((file) => file.path));
 
-    // Hoisted workspace dependencies must not hide undeclared runtime imports.
+    // Locally installed dependencies must not hide undeclared runtime imports.
     const dependencies = new Set([...Object.keys(manifest.dependencies ?? {}), ...Object.keys(manifest.peerDependencies ?? {})]);
     for (const file of files) {
       if (!file.startsWith('dist/') || !file.endsWith('.js')) continue;
@@ -85,7 +85,7 @@ try {
       ]) assert(readFileSync(join(packageRoot, file), 'utf8').includes(registration), `Bridge registration mismatch: ${file}`);
 
       assert(!manifest.dependencies?.['@rdlabo/ionic-theme-ios27'], 'Native UI must not depend on the theme');
-      assert(!files.has('dist/native-integration/transition.js'), 'Ionic transition adapter belongs to the theme');
+      assert(!files.has('dist/esm/native-integration/transition.js'), 'Ionic transition adapter belongs to the theme');
     }
   }
   // Verify the core entry with neither Ionic nor the Ionic utilities installed.
@@ -161,7 +161,7 @@ try {
     enableNativeUI({ verticalBars: { enabled: 'auto' } });
   `);
   execFileSync(process.execPath, [resolve('node_modules/typescript/bin/tsc'), '--noEmit', '--strict', '--module', 'esnext', '--moduleResolution', 'bundler', '--target', 'es2022', '--lib', 'es2022,dom', consumer], {cwd: dir, stdio: 'inherit'});
-  // Only external dependencies come from the workspace; all packages resolve from archives.
+  // Only external dependencies come from this checkout; all packages resolve from archives.
   for (const name of ['@ionic', '@stencil', '@rdlabo/ionic-theme-utils', 'ionicons', 'typescript']) {
     symlinkSync(resolve('node_modules', name), join(dir, 'node_modules', name), 'dir');
   }
@@ -184,6 +184,11 @@ try {
     ],
     { cwd: dir, stdio: 'inherit' },
   );
+  execFileSync(process.execPath, ['-e', `
+    const assert = require('node:assert/strict');
+    const native = require('@rdlabo/capacitor-native-ui');
+    assert.equal(typeof native.enableNativeUI, 'function');
+  `], { cwd: dir, stdio: 'inherit' });
   if (process.argv.includes('--esm')) {
     for (const archive of packed) {
       execFileSync(
