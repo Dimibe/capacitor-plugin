@@ -120,12 +120,17 @@ final class NativeUIExtensionTests: XCTestCase {
     @MainActor func testRetirementRejectsPendingCallsOnlyForThatSource() async throws {
         let broker = NativeUIExtensionActions()
         var requests: [String: String] = [:]
-        let sent = expectation(description: "Both actions sent")
-        sent.expectedFulfillmentCount = 2
-        let first = Task { @MainActor in try await broker.perform(owner: "first") { requests["first"] = $0; sent.fulfill() } }
-        let second = Task { @MainActor in try await broker.perform(owner: "second") { requests["second"] = $0; sent.fulfill() } }
-        defer { first.cancel(); second.cancel() }
-        await fulfillment(of: [sent], timeout: 2)
+        // Synchronize on dispatch itself, not XCTest's wall-clock waiter on a busy simulator.
+        let (sent, continuation) = AsyncStream<(String, String)>.makeStream()
+        let first = Task { @MainActor in try await broker.perform(owner: "first") { continuation.yield(("first", $0)) } }
+        let second = Task { @MainActor in try await broker.perform(owner: "second") { continuation.yield(("second", $0)) } }
+        defer { first.cancel(); second.cancel(); continuation.finish() }
+        var iterator = sent.makeAsyncIterator()
+        for _ in 0..<2 {
+            let dispatched = await iterator.next()
+            let (owner, request) = try XCTUnwrap(dispatched)
+            requests[owner] = request
+        }
         broker.cancel(owner: "first")
         do { try await first.value; XCTFail("Retired source must reject") } catch NativeUIError.unavailable {} catch { XCTFail("\(error)") }
         broker.finish(try XCTUnwrap(requests["second"]))
