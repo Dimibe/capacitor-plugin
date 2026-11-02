@@ -10,7 +10,7 @@ import { movingModal, modalMotionEvent } from './shared/modal.js';
 import { coverOverlayBackground, usesCoveredBackground } from './overlays/covered-overlay.js';
 import { getProjectionState } from './shared/covered-source.js';
 import { createCoveredSnapshots, type CoveredSnapshots } from './shared/covered-snapshot.js';
-import { createTabBarWidths } from './shared/tab-bar-width.js';
+import { createTabBarWidths, tabWidthMeasuring } from './shared/tab-bar-width.js';
 import { createVerticalNavigation } from './shared/vertical-navigation.js';
 import { createHorizontalNavigation, horizontalToolbar, navigationMarker } from './shared/horizontal-navigation.js';
 import { assignToolbarTransitionIds } from './shared/transition-identity.js';
@@ -61,6 +61,7 @@ import {
   syncToolbarText,
   toolbarTextMarker,
   prehideOnlyMutation,
+  contentPressOnlyMutation,
   rejectedClass,
   unprojected,
 } from './shared/dom.js';
@@ -1040,12 +1041,14 @@ export const createRuntime = async (
             movingModal(doc) &&
             (record.target === movingModal(doc) || record.target === movingModal(doc)?.shadowRoot?.querySelector('[part~="content"]'))
           ) &&
+          record.attributeName !== tabWidthMeasuring &&
           record.attributeName !== marker &&
           record.attributeName !== navigationMarker &&
           record.attributeName !== 'data-native-ui-web-source' &&
           record.attributeName !== toolbarTextMarker &&
           record.attributeName !== fadeMarker &&
           !prehideOnlyMutation(record) &&
+          !(['ionic', 'auto'].includes(options.source ?? 'ionic') && !extensions.length && contentPressOnlyMutation(record)) &&
           !(record.attributeName === 'style' && measuringPointerPages.has(record.target as HTMLElement)) &&
           !(
             record.attributeName === 'aria-hidden' &&

@@ -1,3 +1,4 @@
+import { createTabBarWidths } from '../src/native/shared/tab-bar-width';
 import { mockSnapshotOwnership } from './snapshot-scope-fixture';
 import { beforeEach } from 'vitest';
 import { observeVerticalBarsModals } from '../src/native/shared/modal';
@@ -357,3 +358,31 @@ test.each([
     }
   },
 );
+
+test('tab width measurement does not refresh the Web rail, but source changes still do', async () => {
+  document.body.innerHTML =
+    '<ion-app class="ios-theme-vertical-bars"><ion-tab-bar style="width:240px;box-sizing:border-box"></ion-tab-bar></ion-app>';
+  const bar = document.querySelector<HTMLElement>('ion-tab-bar')!;
+  const widths = createTabBarWidths(document);
+  widths.apply(bar, 180);
+  const handle = createVerticalBarsWebProjection(document, {});
+  let schedule: ReturnType<typeof vi.spyOn> | undefined;
+  try {
+    await nextFrame();
+    await nextFrame();
+    schedule = vi.spyOn(window, 'requestAnimationFrame');
+    widths.measure(() => {});
+    await Promise.resolve();
+    expect(schedule).not.toHaveBeenCalled();
+
+    widths.measure(() => {});
+    bar.setAttribute('aria-label', 'Updated tabs');
+    await Promise.resolve();
+    expect(schedule).toHaveBeenCalledTimes(1);
+  } finally {
+    schedule?.mockRestore();
+    await handle.destroy();
+    widths.clear();
+    document.body.replaceChildren();
+  }
+});

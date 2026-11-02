@@ -1,5 +1,6 @@
 import { afterEach, expect, onTestFinished, test, vi } from 'vitest';
 import { observeVerticalBarsModals } from '../src/native/shared/modal';
+import { createTabBarWidths } from '../src/native/shared/tab-bar-width';
 import { createRuntime } from '../src/native/runtime';
 import type { NativeUIConnection } from '../src/native/shared/connection';
 import { suspendNativeUI } from '../src/native-integration';
@@ -965,4 +966,26 @@ test('a dismissing modal retires once and never reacquires while its frame moves
   modal.remove();
   await vi.waitFor(() => expect(f.snapshots.at(-1)?.controls.length).toBeGreaterThan(0));
   expect(f.snapshots.at(-1)?.transitionDuration).toBe(0);
+});
+
+test('tab width reads do not schedule native sync, but source changes still do', async () => {
+  const f = await fixture();
+  const bar = document.createElement('ion-tab-bar');
+  bar.style.width = '240px';
+  document.querySelector('ion-app')!.append(bar);
+  const widths = createTabBarWidths(document);
+  widths.apply(bar, 180);
+  try {
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    const schedule = vi.spyOn(window, 'requestAnimationFrame');
+    widths.measure(() => {});
+    await Promise.resolve();
+    expect(schedule).not.toHaveBeenCalled();
+    widths.measure(() => {});
+    f.leaving.querySelector('button')!.textContent = 'New label';
+    await Promise.resolve();
+    expect(schedule).toHaveBeenCalled();
+  } finally {
+    widths.clear();
+  }
 });
