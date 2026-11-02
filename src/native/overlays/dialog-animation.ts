@@ -1,8 +1,8 @@
 import type { Animation } from '@ionic/core';
 import { createAnimation } from '@ionic/core/components/index.js';
 import { iosPopoverEnterAnimation } from '@rdlabo/ionic-theme-utils';
-import type { Frame } from '../definitions';
-import { dismissAnimation } from './dismiss-animation';
+import type { Frame } from '../definitions.js';
+import { dismissAnimation } from './dismiss-animation.js';
 
 export type Dialog = HTMLIonPopoverElement;
 

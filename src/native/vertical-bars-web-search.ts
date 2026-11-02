@@ -1,5 +1,5 @@
-import { getNativeSearchBindings, type NativeSearchBinding } from '../native-integration';
-import { activateProjectedElement, marker, unprojected } from './shared/dom';
+import { getNativeSearchBindings, type NativeSearchBinding } from '../native-integration/index.js';
+import { activateProjectedElement, marker, unprojected } from './shared/dom.js';
 
 export const searchProjectionClass = 'ios-theme-vertical-bars-search-projection';
 

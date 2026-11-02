@@ -1,8 +1,8 @@
-import type { NativeUIPopoverPresentation } from '../definitions';
-import { projectionIds } from '../shared/projection-id';
-import { isDark } from '../shared/dom';
-import { moveContent } from './content';
-import { captureRelayAppearance, sheetText } from './styles';
+import type { NativeUIPopoverPresentation } from '../definitions.js';
+import { projectionIds } from '../shared/projection-id.js';
+import { isDark } from '../shared/dom.js';
+import { moveContent } from './content.js';
+import { captureRelayAppearance, sheetText } from './styles.js';
 
 export const popoverTrigger = (overlay: HTMLIonPopoverElement): Element | undefined => {
   const event = overlay.event as MouseEvent | undefined;

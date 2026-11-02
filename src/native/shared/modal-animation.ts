@@ -1,4 +1,4 @@
-import type { Frame } from '../definitions';
+import type { Frame } from '../definitions.js';
 
 /** One immutable presentation, played by Core Animation on the same elapsed clock. */
 export interface ModalAnimation {

@@ -85,7 +85,7 @@ try {
       ]) assert(readFileSync(join(packageRoot, file), 'utf8').includes(registration), `Bridge registration mismatch: ${file}`);
 
       assert(!manifest.dependencies?.['@rdlabo/ionic-theme-ios27'], 'Native UI must not depend on the theme');
-      assert(!files.has('dist/native-integration/transition.js'), 'Ionic transition adapter belongs to the theme');
+      assert(!files.has('dist/esm/native-integration/transition.js'), 'Ionic transition adapter belongs to the theme');
     }
   }
   // Verify the core entry with neither Ionic nor the Ionic utilities installed.
@@ -184,6 +184,11 @@ try {
     ],
     { cwd: dir, stdio: 'inherit' },
   );
+  execFileSync(process.execPath, ['-e', `
+    const assert = require('node:assert/strict');
+    const native = require('@rdlabo/capacitor-native-ui');
+    assert.equal(typeof native.enableNativeUI, 'function');
+  `], { cwd: dir, stdio: 'inherit' });
   if (process.argv.includes('--esm')) {
     for (const archive of packed) {
       execFileSync(

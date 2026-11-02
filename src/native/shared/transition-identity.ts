@@ -1,4 +1,4 @@
-import type { Candidate } from './candidate';
+import type { Candidate } from './candidate.js';
 
 /** Presentation correspondence only. Action IDs always remain source-specific. */
 export const assignToolbarTransitionIds = (candidates: Candidate[]): void => {

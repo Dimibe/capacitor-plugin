@@ -1,4 +1,4 @@
-import { sheetText } from './styles';
+import { sheetText } from './styles.js';
 
 /** Constructed stylesheets cannot cross documents with their nodes. */
 export const moveContent = (content: HTMLElement[], destination: HTMLElement): (() => void) => {

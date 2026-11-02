@@ -1,8 +1,8 @@
-import { localToolbarOption, toolbarOptions } from './shared/toolbar-options';
-import type { VerticalControlAreaOptions } from './definitions';
-import { modalUsesVerticalBars } from './shared/modal';
-import { LIFECYCLE_DID_ENTER, LIFECYCLE_DID_LEAVE, LIFECYCLE_WILL_ENTER, LIFECYCLE_WILL_LEAVE } from './shared/events';
-import { VERTICAL_BARS_TRANSITION_CANCELED } from '../native-integration';
+import { localToolbarOption, toolbarOptions } from './shared/toolbar-options.js';
+import type { VerticalControlAreaOptions } from './definitions.js';
+import { modalUsesVerticalBars } from './shared/modal.js';
+import { LIFECYCLE_DID_ENTER, LIFECYCLE_DID_LEAVE, LIFECYCLE_WILL_ENTER, LIFECYCLE_WILL_LEAVE } from './shared/events.js';
+import { VERTICAL_BARS_TRANSITION_CANCELED } from '../native-integration/index.js';
 import {
   childElements,
   clearVerticalBarsPlacement,
@@ -19,7 +19,7 @@ import {
   rejectedClass,
   setVerticalBarsPlacement,
   syncToolbarText,
-} from './shared/dom';
+} from './shared/dom.js';
 
 const overlays = 'ion-menu, ion-popover';
 const sourceSelector = 'ion-back-button, ion-menu-button, ion-buttons, ion-button';

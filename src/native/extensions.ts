@@ -1,9 +1,9 @@
-import { readScrollPlacement } from './shared/scroll-placement';
-import { fitsClip } from './shared/clipping';
-export { projectionAncestors as extensionAncestors } from './shared/clipping';
-import type { Candidate, Identify } from './shared/candidate';
-import { frame, isDark, visible } from './shared/dom';
-import { iconSource, type createIconRenderer } from './shared/icons';
+import { readScrollPlacement } from './shared/scroll-placement.js';
+import { fitsClip } from './shared/clipping.js';
+export { projectionAncestors as extensionAncestors } from './shared/clipping.js';
+import type { Candidate, Identify } from './shared/candidate.js';
+import { frame, isDark, visible } from './shared/dom.js';
+import { iconSource, type createIconRenderer } from './shared/icons.js';
 
 export type NativeUIValue = string | number | boolean | null | NativeUIValue[] | { [key: string]: NativeUIValue };
 

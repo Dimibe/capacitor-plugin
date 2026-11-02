@@ -1,14 +1,14 @@
-import { controlDefault } from './shared/control-options';
-import { toolbarOptions } from './shared/toolbar-options';
-import { createDiagnostics } from './shared/diagnostics';
-import { createHTMLWebProjection } from './html';
-import { validateExtensions, type NativeUIExtension } from './extensions';
+import { controlDefault } from './shared/control-options.js';
+import { toolbarOptions } from './shared/toolbar-options.js';
+import { createDiagnostics } from './shared/diagnostics.js';
+import { createHTMLWebProjection } from './html.js';
+import { validateExtensions, type NativeUIExtension } from './extensions.js';
 import { Capacitor, registerPlugin } from '@capacitor/core';
-import { nativeWebViewMetrics } from '../native-integration';
-import type { NativeUIRuntimeHandle, NativeUIRuntimeOptions, NativeUIPlugin, VerticalBarEdge, WebViewMetrics } from './definitions';
-import { createRuntime } from './runtime';
-import { bounded, boundedListener } from './shared/bridge';
-import { createNativeConnection, type NativeUIConnection } from './shared/connection';
+import { nativeWebViewMetrics } from '../native-integration/index.js';
+import type { NativeUIRuntimeHandle, NativeUIRuntimeOptions, NativeUIPlugin, VerticalBarEdge, WebViewMetrics } from './definitions.js';
+import { createRuntime } from './runtime.js';
+import { bounded, boundedListener } from './shared/bridge.js';
+import { createNativeConnection, type NativeUIConnection } from './shared/connection.js';
 interface OverlayController {
   suspend(): Promise<() => void>;
   destroy(): Promise<void>;
@@ -21,11 +21,11 @@ type OverlayFactory = (
   nativeRail: () => boolean,
   connection?: NativeUIConnection,
 ) => Promise<OverlayController>;
-import { createVerticalBarsWebProjection } from './vertical-bars-web';
-import { prehideVerticalBarsToolbarSources } from './prehide';
-import { observeVerticalBarsModals, topModal, modalPreparing, modalPresentation } from './shared/modal';
-export { defineNativeUI } from './extensions';
-export type { NativeUIExtension, NativeUIValue } from './extensions';
+import { createVerticalBarsWebProjection } from './vertical-bars-web.js';
+import { prehideVerticalBarsToolbarSources } from './prehide.js';
+import { observeVerticalBarsModals, topModal, modalPreparing, modalPresentation } from './shared/modal.js';
+export { defineNativeUI } from './extensions.js';
+export type { NativeUIExtension, NativeUIValue } from './extensions.js';
 export type {
   NativeUIComponent,
   NativeUIControls,
@@ -35,7 +35,7 @@ export type {
   NativeUISuspension,
   VerticalBarEdge,
   WebViewMetrics,
-} from './definitions';
+} from './definitions.js';
 
 const plugin = registerPlugin<NativeUIPlugin>('NativeUI');
 export const NativeUI = plugin;

@@ -1,8 +1,8 @@
-import { horizontalSelected, horizontalToolbarGroup, inVerticalToolbarLayout } from '../shared/toolbar-options';
-import { createCandidate, appendItem } from '../shared/candidate';
-import type { Candidate, Identify } from '../shared/candidate';
-import type { VerticalControlAreaOptions } from '../definitions';
-import { childElements, inFixedToolbar, isVerticalBarsToolbarAction, isVerticalBarsToolbarGroup } from '../shared/dom';
+import { horizontalSelected, horizontalToolbarGroup, inVerticalToolbarLayout } from '../shared/toolbar-options.js';
+import { createCandidate, appendItem } from '../shared/candidate.js';
+import type { Candidate, Identify } from '../shared/candidate.js';
+import type { VerticalControlAreaOptions } from '../definitions.js';
+import { childElements, inFixedToolbar, isVerticalBarsToolbarAction, isVerticalBarsToolbarGroup } from '../shared/dom.js';
 
 export const tag = 'ion-menu-button';
 // Horizontal menu buttons belong to ion-buttons; vertical actions can opt out of grouping.

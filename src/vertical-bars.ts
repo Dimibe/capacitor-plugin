@@ -1,4 +1,4 @@
-export { enableVerticalControlArea, setVerticalControlAreaPlacement, NativeUI } from './native';
+export { enableVerticalControlArea, setVerticalControlAreaPlacement, NativeUI } from './native/index.js';
 export type {
   NativeUIStatus,
   NativeUISuspension,
@@ -7,6 +7,6 @@ export type {
   VerticalControlAreaOptions,
   ControlProjection,
   NativeUIControls,
-} from './native';
+} from './native/index.js';
 
-export { applyFoldStateClasses } from './native/foldable/fold-state';
+export { applyFoldStateClasses } from './native/foldable/fold-state.js';

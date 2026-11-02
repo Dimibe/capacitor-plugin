@@ -6,27 +6,27 @@ import {
   type OverlayChange,
 } from '@webview-native-ui/engine';
 import { enableSupportIonicOverlays, coveredIonicSurface } from '@webview-native-ui/engine/ionic';
-import { movingModal, modalMotionEvent } from './shared/modal';
-import { coverOverlayBackground, usesCoveredBackground } from './overlays/covered-overlay';
-import { getProjectionState } from './shared/covered-source';
-import { createCoveredSnapshots, type CoveredSnapshots } from './shared/covered-snapshot';
-import { createTabBarWidths } from './shared/tab-bar-width';
-import { createVerticalNavigation } from './shared/vertical-navigation';
-import { createHorizontalNavigation, horizontalToolbar, navigationMarker } from './shared/horizontal-navigation';
-import { assignToolbarTransitionIds } from './shared/transition-identity';
-import { controlSelected } from './shared/control-options';
-import { createDiagnostics } from './shared/diagnostics';
-import { htmlSelector, readHTMLControl } from './html';
-import { extensionAncestors, readExtension } from './extensions';
-import { bounded, boundedListener } from './shared/bridge';
-import type { NativeUIConnection } from './shared/connection';
+import { movingModal, modalMotionEvent } from './shared/modal.js';
+import { coverOverlayBackground, usesCoveredBackground } from './overlays/covered-overlay.js';
+import { getProjectionState } from './shared/covered-source.js';
+import { createCoveredSnapshots, type CoveredSnapshots } from './shared/covered-snapshot.js';
+import { createTabBarWidths } from './shared/tab-bar-width.js';
+import { createVerticalNavigation } from './shared/vertical-navigation.js';
+import { createHorizontalNavigation, horizontalToolbar, navigationMarker } from './shared/horizontal-navigation.js';
+import { assignToolbarTransitionIds } from './shared/transition-identity.js';
+import { controlSelected } from './shared/control-options.js';
+import { createDiagnostics } from './shared/diagnostics.js';
+import { htmlSelector, readHTMLControl } from './html.js';
+import { extensionAncestors, readExtension } from './extensions.js';
+import { bounded, boundedListener } from './shared/bridge.js';
+import type { NativeUIConnection } from './shared/connection.js';
 import {
   alignVerticalTabBar,
   forgetVerticalBarFrame,
   rememberVerticalBarFrame,
   validVerticalBarFrame,
-} from './shared/vertical-bars-geometry';
-import { projectionIds } from './shared/projection-id';
+} from './shared/vertical-bars-geometry.js';
+import { projectionIds } from './shared/projection-id.js';
 import {
   inVerticalBarsSurface,
   topModal,
@@ -36,12 +36,12 @@ import {
   modalPreparing,
   modalDismissing,
   modalPresentation,
-} from './shared/modal';
+} from './shared/modal.js';
 import type { PluginListenerHandle } from '@capacitor/core';
-import { LIFECYCLE_WILL_ENTER, LIFECYCLE_WILL_LEAVE, LIFECYCLE_DID_ENTER, LIFECYCLE_DID_LEAVE } from './shared/events';
-import type { NativeUITransitionRelease } from '../native-integration';
-import { VERTICAL_BARS_TRANSITION_CANCELED, getNativeSearchBindings, setNativeUIIntegration } from '../native-integration';
-import { createSearchSupport } from './components/searchable-tabs';
+import { LIFECYCLE_WILL_ENTER, LIFECYCLE_WILL_LEAVE, LIFECYCLE_DID_ENTER, LIFECYCLE_DID_LEAVE } from './shared/events.js';
+import type { NativeUITransitionRelease } from '../native-integration/index.js';
+import { VERTICAL_BARS_TRANSITION_CANCELED, getNativeSearchBindings, setNativeUIIntegration } from '../native-integration/index.js';
+import { createSearchSupport } from './components/searchable-tabs.js';
 import type {
   NativeUIActivation,
   NativeUISnapshot,
@@ -49,8 +49,8 @@ import type {
   NativeUIRuntimeOptions,
   NativeUIPlugin,
   NativeUIStatus,
-} from './definitions';
-import { readCandidate, selector, shadowSelector, motionSelector, isVerticalBarsCandidate } from './components';
+} from './definitions.js';
+import { readCandidate, selector, shadowSelector, motionSelector, isVerticalBarsCandidate } from './components/index.js';
 import {
   activateProjectedElement,
   inFixedToolbar,
@@ -63,11 +63,11 @@ import {
   prehideOnlyMutation,
   rejectedClass,
   unprojected,
-} from './shared/dom';
-import { createIconRenderer } from './shared/icons';
-import type { Candidate } from './shared/candidate';
-import { CSS_MOTION_EVENTS } from './shared/events';
-import { createCrossfade, fadeMarker } from './shared/crossfade';
+} from './shared/dom.js';
+import { createIconRenderer } from './shared/icons.js';
+import type { Candidate } from './shared/candidate.js';
+import { CSS_MOTION_EVENTS } from './shared/events.js';
+import { createCrossfade, fadeMarker } from './shared/crossfade.js';
 
 // Only these Web overlays leave the rail's display and interaction intact.
 const railPreservingOverlays = 'ion-toast, ion-popover, ion-picker';

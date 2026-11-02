@@ -1,5 +1,5 @@
-import type { Candidate } from './candidate';
-import { inFixedToolbar } from './dom';
+import type { Candidate } from './candidate.js';
+import { inFixedToolbar } from './dom.js';
 
 export const navigationMarker = 'data-native-ui-navigation-source';
 export const horizontalToolbar = (candidate: Candidate): boolean =>

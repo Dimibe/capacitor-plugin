@@ -19,26 +19,27 @@
     "ios",
     "android"
   ],
-  "main": "./dist/native/index.js",
-  "module": "./dist/native/index.js",
-  "types": "./dist/native/index.d.ts",
+  "main": "./dist/plugin.cjs",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/native/index.d.ts",
-      "import": "./dist/native/index.js"
+      "types": "./dist/esm/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/plugin.cjs"
     },
     "./vertical-bars": {
-      "types": "./dist/vertical-bars.d.ts",
-      "import": "./dist/vertical-bars.js"
+      "types": "./dist/esm/vertical-bars.d.ts",
+      "import": "./dist/esm/vertical-bars.js"
     },
     "./integration": {
-      "types": "./dist/native-integration/index.d.ts",
-      "import": "./dist/native-integration/index.js"
+      "types": "./dist/esm/native-integration/index.d.ts",
+      "import": "./dist/esm/native-integration/index.js"
     },
     "./package.json": "./package.json",
     "./core": {
-      "types": "./dist/core.d.ts",
-      "import": "./dist/core.js"
+      "types": "./dist/esm/core.d.ts",
+      "import": "./dist/esm/core.js"
     }
   },
   "files": [
@@ -56,7 +57,7 @@
     "docs"
   ],
   "scripts": {
-    "build": "npm run clean && npm run docgen && tsc --noEmit && rdlabo-build-theme",
+    "build": "npm run clean && npm run docgen && tsc && rollup -c rollup.config.mjs",
     "test": "vitest run",
     "test:packages": "node scripts/verify-packages.mjs",
     "test:esm": "node scripts/verify-packages.mjs --esm",
@@ -65,7 +66,9 @@
     "release": "np --no-tests --no-publish --branch main",
     "clean": "rm -rf dist",
     "docgen": "docgen --project tsconfig.docgen.json --api NativeUIHandle --output-readme docs/native-ui.md && docgen --project tsconfig.docgen.json --api VerticalControlAreaHandle --output-readme docs/vertical-bars.md",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "watch": "tsc --watch",
+    "verify:web": "npm run build && npm test && npm run test:esm"
   },
   "publishConfig": {
     "access": "public"
@@ -102,12 +105,14 @@
     "lint-staged": "^16.2.1",
     "np": "^10.2.0",
     "prettier": "^3.6.2",
-    "tsdown": "^0.23.0",
     "typescript": "^5.9.3",
     "esbuild": "0.28.1",
     "@ionic/core": "8.8.19",
     "@capacitor/ios": "^8.5.2",
     "vitest": "^4.0.0",
-    "jsdom": "^26.0.0"
-  }
+    "jsdom": "^26.0.0",
+    "rollup": "^4.53.2",
+    "@rollup/plugin-node-resolve": "^16.0.0"
+  },
+  "unpkg": "./dist/plugin.js"
 }

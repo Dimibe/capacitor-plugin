@@ -1,6 +1,6 @@
 import { createWebProjectionSurface } from '@webview-native-ui/engine';
-import type { NativeUIPlugin } from '../definitions';
-import { getProjectionState } from './covered-source';
+import type { NativeUIPlugin } from '../definitions.js';
+import { getProjectionState } from './covered-source.js';
 
 /** Ionic supplies source ownership and proxy placement; Engine owns image handoff. */
 export const createCoveredSnapshots = async (

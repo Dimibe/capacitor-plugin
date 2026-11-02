@@ -1,7 +1,7 @@
-import { modalUsesVerticalBars } from './modal';
-import type { VerticalControlAreaOptions } from '../definitions';
-import { controlDefault } from './control-options';
-import { childElements, inFixedToolbar, isExcluded, isNativeUIDisabled } from './dom';
+import { modalUsesVerticalBars } from './modal.js';
+import type { VerticalControlAreaOptions } from '../definitions.js';
+import { controlDefault } from './control-options.js';
+import { childElements, inFixedToolbar, isExcluded, isNativeUIDisabled } from './dom.js';
 
 export const toolbarOptions = (options: VerticalControlAreaOptions, vertical: boolean) => ({
   buttonGroup: controlDefault(options, 'buttonGroup', vertical),

@@ -1,4 +1,4 @@
-import type { Frame, NativeUIVerticalBarFrame } from '../definitions';
+import type { Frame, NativeUIVerticalBarFrame } from '../definitions.js';
 
 const measurements = new WeakMap<Element, { frame: Frame; viewport: string }>();
 const viewport = (element: Element) => {

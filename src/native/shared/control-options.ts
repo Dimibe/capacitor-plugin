@@ -1,4 +1,4 @@
-import type { NativeUIControls, NativeUIOptions } from '../definitions';
+import type { NativeUIControls, NativeUIOptions } from '../definitions.js';
 
 /** Resolve one default without changing discovery, explicit selection, or placement. */
 export const controlDefault = (options: NativeUIOptions, kind: keyof NativeUIControls, vertical: boolean): boolean => {

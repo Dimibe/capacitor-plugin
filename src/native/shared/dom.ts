@@ -1,9 +1,9 @@
 import { getUnprojectedVisibility } from '@webview-native-ui/engine';
 
-import { fadeMarker } from './crossfade';
-import { modalUsesVerticalBars } from './modal';
+import { fadeMarker } from './crossfade.js';
+import { modalUsesVerticalBars } from './modal.js';
 
-import type { Frame } from '../definitions';
+import type { Frame } from '../definitions.js';
 
 export const marker = 'data-native-ui-projected';
 // Scoped runtimes (Stencil slot emulation) patch child accessors on upgraded

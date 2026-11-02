@@ -1,5 +1,5 @@
 import type { WebProjectionTransport } from '@webview-native-ui/engine';
-import type { NativeUIExtension } from './extensions';
+import type { NativeUIExtension } from './extensions.js';
 import type { PluginListenerHandle } from '@capacitor/core';
 
 export type NativeUIComponent =
@@ -244,7 +244,7 @@ export interface NativeUISnapshot {
   verticalBarEdge?: 'left' | 'right';
   /** Visible foreground modal bounds; omitted for the full page. */
   verticalBarFrame?: Frame;
-  modalAnimation?: import('./shared/modal-animation').ModalAnimation;
+  modalAnimation?: import('./shared/modal-animation.js').ModalAnimation;
   /** Web-owned page identities, from root through the active rail destination. */
   verticalBarNavigation?: string[];
   /** Keep the current native rail until an interactive navigation settles. */

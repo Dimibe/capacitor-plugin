@@ -1,6 +1,6 @@
-import type { NativeUIControl, NativeUIItem, NativeUIControlKind, NativeUIComponent, VerticalControlAreaOptions } from '../definitions';
-import { frame, isDark, isVerticalBarsSource, text, visible } from './dom';
-import { iconSource, type createIconRenderer } from './icons';
+import type { NativeUIControl, NativeUIItem, NativeUIControlKind, NativeUIComponent, VerticalControlAreaOptions } from '../definitions.js';
+import { frame, isDark, isVerticalBarsSource, text, visible } from './dom.js';
+import { iconSource, type createIconRenderer } from './icons.js';
 
 export interface Candidate {
   scrollElement?: HTMLElement;

@@ -1,4 +1,4 @@
-import type { FoldState } from './types';
+import type { FoldState } from './types.js';
 
 /** @deprecated Import applyFoldStateClasses from @rdlabo/ionic-theme-ios27 instead.
  * Keep posture on ion-app so descendants can follow it through CSS. */

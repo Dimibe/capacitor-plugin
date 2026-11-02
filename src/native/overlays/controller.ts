@@ -1,15 +1,15 @@
 import { getOverlayCoordinator } from '@webview-native-ui/engine';
 import { enableSupportIonicOverlays } from '@webview-native-ui/engine/ionic';
-import type { NativeUIOptions, NativeUIPlugin } from '../definitions';
-import { bounded, boundedListener } from '../shared/bridge';
-import type { NativeUIConnection } from '../shared/connection';
-import { isExcluded, isPermanentlyExcluded, isNativeUIDisabled } from '../shared/dom';
-import { activeElement, trapFocus } from './focus';
-import { relayPopover, popoverPresentation, verticalBarsPopoverAnchor } from './popover';
-import { nativeDialogAnimation } from './dialog-animation';
-import { relayLayoutSupported, relayStyles } from './styles';
-import { moveContent } from './content';
-import { validVerticalBarFrame } from '../shared/vertical-bars-geometry';
+import type { NativeUIOptions, NativeUIPlugin } from '../definitions.js';
+import { bounded, boundedListener } from '../shared/bridge.js';
+import type { NativeUIConnection } from '../shared/connection.js';
+import { isExcluded, isPermanentlyExcluded, isNativeUIDisabled } from '../shared/dom.js';
+import { activeElement, trapFocus } from './focus.js';
+import { relayPopover, popoverPresentation, verticalBarsPopoverAnchor } from './popover.js';
+import { nativeDialogAnimation } from './dialog-animation.js';
+import { relayLayoutSupported, relayStyles } from './styles.js';
+import { moveContent } from './content.js';
+import { validVerticalBarFrame } from '../shared/vertical-bars-geometry.js';
 
 type Presentation = { kind: 'popover'; animated: boolean };
 type Overlay = HTMLIonPopoverElement;

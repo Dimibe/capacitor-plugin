@@ -1,14 +1,14 @@
 import { getUnprojectedVisibility } from '@webview-native-ui/engine';
 
 import { enableSupportIonicOverlays } from '@webview-native-ui/engine/ionic';
-import { getProjectionState } from './shared/covered-source';
-import { controlSelected } from './shared/control-options';
-import { createCrossfade, fadeMarker } from './shared/crossfade';
-import { alignVerticalBarClone, verticalBarFrame } from './shared/vertical-bars-geometry';
-import { createVerticalBarsWebSearch, searchProjectionClass } from './vertical-bars-web-search';
-import { inVerticalBarsSurface, topModal, movingModal, modalPreparing, modalPresentation } from './shared/modal';
-import type { NativeUIRuntimeHandle, NativeUIOptions, NativeUIStatus } from './definitions';
-import { VERTICAL_BARS_TRANSITION_CANCELED } from '../native-integration';
+import { getProjectionState } from './shared/covered-source.js';
+import { controlSelected } from './shared/control-options.js';
+import { createCrossfade, fadeMarker } from './shared/crossfade.js';
+import { alignVerticalBarClone, verticalBarFrame } from './shared/vertical-bars-geometry.js';
+import { createVerticalBarsWebSearch, searchProjectionClass } from './vertical-bars-web-search.js';
+import { inVerticalBarsSurface, topModal, movingModal, modalPreparing, modalPresentation } from './shared/modal.js';
+import type { NativeUIRuntimeHandle, NativeUIOptions, NativeUIStatus } from './definitions.js';
+import { VERTICAL_BARS_TRANSITION_CANCELED } from '../native-integration/index.js';
 import {
   activateProjectedElement,
   createVerticalBarsPageState,
@@ -28,7 +28,7 @@ import {
   prehiddenClass,
   unprojected,
   withoutPrehide,
-} from './shared/dom';
+} from './shared/dom.js';
 
 const backProjectionClass = 'ios-theme-vertical-bars-back-button-projection';
 const toolbarProjectionClass = 'ios-theme-vertical-bars-toolbar-projection';

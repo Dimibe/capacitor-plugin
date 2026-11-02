@@ -81,6 +81,8 @@ npm run test:packages
 
 The repository root is the npm plugin: `src`, `ios`, `android`, and `package.json` live together. Its TypeScript unit tests live in `tests`; Swift and Android tests live with the plugin. `examples/native-ui-html` demonstrates use without the Ionic theme.
 
+The build follows the Capacitor plugin layout: `src/index.ts` is compiled by TypeScript to `dist/esm`, and Rollup generates the browser bundle (`dist/plugin.js`) and CommonJS bundle (`dist/plugin.cjs`). The `.cjs` extension is required because this package uses `type: module`. Public ESM subpaths share the same modules in `dist/esm`. Run `npm run watch` for TypeScript development or `npm run verify:web` for the web checks.
+
 ## Test with the Ionic theme
 
 The full Ionic demo, screenshot tests, theme transition tests, and simulator integration fixtures remain in [ionic-theme-ios27](https://github.com/webview-native-ui/ionic-theme-ios27). They install this plugin as an npm dependency. Do not duplicate the demo here.

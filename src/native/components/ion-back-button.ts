@@ -1,8 +1,8 @@
-import type { VerticalControlAreaOptions } from '../definitions';
-import { horizontalSelected, inVerticalToolbarLayout } from '../shared/toolbar-options';
-import { createCandidate, appendItem } from '../shared/candidate';
-import type { Candidate, Identify } from '../shared/candidate';
-import { inFixedToolbar, isVerticalBarsSource } from '../shared/dom';
+import type { VerticalControlAreaOptions } from '../definitions.js';
+import { horizontalSelected, inVerticalToolbarLayout } from '../shared/toolbar-options.js';
+import { createCandidate, appendItem } from '../shared/candidate.js';
+import type { Candidate, Identify } from '../shared/candidate.js';
+import { inFixedToolbar, isVerticalBarsSource } from '../shared/dom.js';
 
 export const tag = 'ion-back-button';
 

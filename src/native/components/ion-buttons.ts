@@ -1,9 +1,9 @@
-import { horizontalToolbarGroup, inVerticalToolbarLayout } from '../shared/toolbar-options';
-import type { VerticalControlAreaOptions } from '../definitions';
-import { createCandidate, appendItem } from '../shared/candidate';
-import type { Candidate, Identify } from '../shared/candidate';
-import { childElements, verticalBarsToolbarActions, inFixedToolbar, isVerticalBarsToolbarGroup } from '../shared/dom';
-import * as menuButton from './ion-menu-button';
+import { horizontalToolbarGroup, inVerticalToolbarLayout } from '../shared/toolbar-options.js';
+import type { VerticalControlAreaOptions } from '../definitions.js';
+import { createCandidate, appendItem } from '../shared/candidate.js';
+import type { Candidate, Identify } from '../shared/candidate.js';
+import { childElements, verticalBarsToolbarActions, inFixedToolbar, isVerticalBarsToolbarGroup } from '../shared/dom.js';
+import * as menuButton from './ion-menu-button.js';
 
 export const tag = 'ion-buttons';
 export const tracksMotion = true;

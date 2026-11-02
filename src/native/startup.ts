@@ -1,5 +1,5 @@
-import { enableNativeUI as activate } from './activation';
-import type { NativeUIRuntimeOptions, NativeUIHandle, NativeUIOptions, NativeUIRuntimeHandle } from './definitions';
+import { enableNativeUI as activate } from './activation.js';
+import type { NativeUIRuntimeOptions, NativeUIHandle, NativeUIOptions, NativeUIRuntimeHandle } from './definitions.js';
 
 type OverlayFactory = Parameters<typeof activate>[1];
 const handles = new WeakMap<NativeUIRuntimeHandle, NativeUIHandle>();

@@ -1,6 +1,6 @@
 import type { PluginListenerHandle } from '@capacitor/core';
-import type { NativeUIConnectionState, NativeUIPlugin } from '../definitions';
-import { bounded, boundedListener } from './bridge';
+import type { NativeUIConnectionState, NativeUIPlugin } from '../definitions.js';
+import { bounded, boundedListener } from './bridge.js';
 
 type Check = (state: NativeUIConnectionState, restored: boolean, requestedAt: number) => void | Promise<void>;
 type Failure = (error: unknown) => void | Promise<void>;

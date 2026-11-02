@@ -1,4 +1,4 @@
-import type { CoveredSnapshots } from '../shared/covered-snapshot';
+import type { CoveredSnapshots } from '../shared/covered-snapshot.js';
 
 export { usesOverlayBackdrop as usesCoveredBackground } from '@webview-native-ui/engine';
 import { usesOverlayBackdrop as usesCoveredBackground } from '@webview-native-ui/engine';

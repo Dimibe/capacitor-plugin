@@ -1,4 +1,4 @@
-import type { VerticalBarEdge, VerticalBarPlacement } from './definitions';
+import type { VerticalBarEdge, VerticalBarPlacement } from './definitions.js';
 const physicalVerticalBarEdge = (edge: Exclude<VerticalBarEdge, null>, rtl: boolean) => ((edge === 'leading') !== rtl ? 'left' : 'right');
 const elementRtl = (element: Element): boolean => element.closest('[dir]')?.getAttribute('dir') === 'rtl';
 

@@ -1,8 +1,8 @@
-import { getProjectionState } from './shared/covered-source';
-import { fitsClip } from './shared/clipping';
-import type { NativeUIRuntimeOptions, NativeUIRuntimeHandle } from './definitions';
-import { appendItem, createCandidate, type Candidate, type Identify } from './shared/candidate';
-import { marker, unprojected, visible } from './shared/dom';
+import { getProjectionState } from './shared/covered-source.js';
+import { fitsClip } from './shared/clipping.js';
+import type { NativeUIRuntimeOptions, NativeUIRuntimeHandle } from './definitions.js';
+import { appendItem, createCandidate, type Candidate, type Identify } from './shared/candidate.js';
+import { marker, unprojected, visible } from './shared/dom.js';
 
 /** Standard HTML sources use standard native renderers, not app-local Swift extensions. */
 export const htmlSelector = '[data-native-ui="button"], [data-native-ui="back-button"]';

@@ -1,6 +1,6 @@
 import { enableSupportIonicOverlays, ionicModalStack } from '@webview-native-ui/engine/ionic';
-import type { Frame } from '../definitions';
-import { prepareSheetLayout, readModalAnimation, type ModalAnimation } from './modal-animation';
+import type { Frame } from '../definitions.js';
+import { prepareSheetLayout, readModalAnimation, type ModalAnimation } from './modal-animation.js';
 
 /** Modal hosts cover the viewport even when their visible dialog is centered. */
 export const modalRailClass = 'ios-theme-vertical-bars-modal';
