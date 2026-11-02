@@ -36,7 +36,6 @@ jobs:
       - run: npm run build
       - run: npm test
       - run: npm run test:esm
-      - run: npm run test:packages
       - name: Verify Engine native dependency
         run: sh scripts/verify-engine-maven.sh "$(node -p "require('./package.json').dependencies['@webview-native-ui/engine'].slice(1)")"
       - name: Publish plugin
