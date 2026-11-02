@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "@capacitor/core": "^8.5.2",
-    "@rdlabo/capacitor-native-ui": "file:../../packages/capacitor-native-ui"
+    "@rdlabo/capacitor-native-ui": "file:../.."
   },
   "devDependencies": {
     "esbuild": "^0.28.1"

@@ -5,12 +5,10 @@ ENGINE_PODS_CAPACITOR=${1:?Provide the installed @capacitor/ios package director
 ENGINE_PODS_CAPACITOR=$(cd "$ENGINE_PODS_CAPACITOR" && pwd)
 ENGINE_PODS_TEMP=$(mktemp -d)
 trap 'rm -rf "$ENGINE_PODS_TEMP"' EXIT
-for package in capacitor-native-ui; do
-  archive=$(npm pack "./packages/$package" --ignore-scripts --json --pack-destination "$ENGINE_PODS_TEMP" | node -pe 'JSON.parse(require("fs").readFileSync(0,"utf8"))[0].filename')
-  mkdir -p "$ENGINE_PODS_TEMP/node_modules/@rdlabo/$package"
-  tar -xzf "$ENGINE_PODS_TEMP/$archive" --strip-components=1 -C "$ENGINE_PODS_TEMP/node_modules/@rdlabo/$package"
-done
-engine_requirement=$(node -p "require('./packages/capacitor-native-ui/package.json').dependencies['@webview-native-ui/engine']")
+archive=$(npm pack . --ignore-scripts --json --pack-destination "$ENGINE_PODS_TEMP" | node -pe 'JSON.parse(require("fs").readFileSync(0,"utf8"))[0].filename')
+mkdir -p "$ENGINE_PODS_TEMP/node_modules/@rdlabo/capacitor-native-ui"
+tar -xzf "$ENGINE_PODS_TEMP/$archive" --strip-components=1 -C "$ENGINE_PODS_TEMP/node_modules/@rdlabo/capacitor-native-ui"
+engine_requirement=$(node -p "require('./package.json').dependencies['@webview-native-ui/engine']")
 archive=$(npm pack "@webview-native-ui/engine@$engine_requirement" --ignore-scripts --json --pack-destination "$ENGINE_PODS_TEMP" | node -pe 'JSON.parse(require("fs").readFileSync(0,"utf8"))[0].filename')
 mkdir -p "$ENGINE_PODS_TEMP/node_modules/@webview-native-ui/engine"
 tar -xzf "$ENGINE_PODS_TEMP/$archive" --strip-components=1 -C "$ENGINE_PODS_TEMP/node_modules/@webview-native-ui/engine"

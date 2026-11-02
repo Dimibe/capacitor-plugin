@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from 'vitest';
-import { relayStyles } from '../packages/capacitor-native-ui/src/native/overlays/styles';
+import { relayStyles } from '../src/native/overlays/styles';
 
 const cleanup: (() => void)[] = [];
 afterEach(() => {

@@ -1,6 +1,6 @@
 import { afterEach, expect, test, vi } from 'vitest';
-import { createRuntime } from '../packages/capacitor-native-ui/src/native/runtime';
-import type { NativeUIPlugin, NativeUIRuntimeHandle, NativeUISnapshot } from '../packages/capacitor-native-ui/src/native/definitions';
+import { createRuntime } from '../src/native/runtime';
+import type { NativeUIPlugin, NativeUIRuntimeHandle, NativeUISnapshot } from '../src/native/definitions';
 
 let runtime: NativeUIRuntimeHandle | undefined;
 afterEach(async () => {
@@ -74,8 +74,8 @@ vi.mock('@capacitor/core', () => ({
   Capacitor: { getPlatform: () => 'ios', isPluginAvailable: () => true },
   registerPlugin: () => bridge,
 }));
-import { enableNativeUI } from '../packages/capacitor-native-ui/src/core';
-import { nativeWebViewMetrics } from '../packages/capacitor-native-ui/src/native-integration';
+import { enableNativeUI } from '../src/core';
+import { nativeWebViewMetrics } from '../src/native-integration';
 
 test.each([
   [true, true],

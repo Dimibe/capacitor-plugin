@@ -1,10 +1,10 @@
-import { getProjectionState } from '../packages/capacitor-native-ui/src/native/shared/covered-source';
+import { getProjectionState } from '../src/native/shared/covered-source';
 const projectionState = getProjectionState(document);
 const { isProjectionMutation } = projectionState;
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-import { createCoveredSnapshots } from '../packages/capacitor-native-ui/src/native/shared/covered-snapshot';
-import type { NativeUIPlugin } from '../packages/capacitor-native-ui/src/native/definitions';
-import { createCandidate } from '../packages/capacitor-native-ui/src/native/shared/candidate';
+import { createCoveredSnapshots } from '../src/native/shared/covered-snapshot';
+import type { NativeUIPlugin } from '../src/native/definitions';
+import { createCandidate } from '../src/native/shared/candidate';
 let managers: Awaited<ReturnType<typeof createCoveredSnapshots>>[];
 beforeEach(() => {
   managers = [];

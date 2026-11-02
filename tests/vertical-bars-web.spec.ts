@@ -1,13 +1,13 @@
 import { mockSnapshotOwnership } from './snapshot-scope-fixture';
 import { beforeEach } from 'vitest';
-import { observeVerticalBarsModals } from '../packages/capacitor-native-ui/src/native/shared/modal';
-import { prehideVerticalBarsToolbarSources } from '../packages/capacitor-native-ui/src/native/prehide';
+import { observeVerticalBarsModals } from '../src/native/shared/modal';
+import { prehideVerticalBarsToolbarSources } from '../src/native/prehide';
 import { expect, test, vi } from 'vitest';
-import { createVerticalBarsWebProjection } from '../packages/capacitor-native-ui/src/native/vertical-bars-web';
-import { getProjectionState } from '../packages/capacitor-native-ui/src/native/shared/covered-source';
+import { createVerticalBarsWebProjection } from '../src/native/vertical-bars-web';
+import { getProjectionState } from '../src/native/shared/covered-source';
 const projectionState = getProjectionState(document);
 const { sourcesChangedEvent } = projectionState;
-import { setVerticalBarsPlacement } from '../packages/capacitor-native-ui/src/native/shared/dom';
+import { setVerticalBarsPlacement } from '../src/native/shared/dom';
 
 let owners: Set<HTMLElement>, visibleOwners: Set<HTMLElement>, preparedOwners: Set<HTMLElement>, nativeOwners: Set<HTMLElement>;
 beforeEach(() => {

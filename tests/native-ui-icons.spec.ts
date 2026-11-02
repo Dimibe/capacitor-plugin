@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from 'vitest';
-import { createIconRenderer } from '../packages/capacitor-native-ui/src/native/shared/icons';
+import { createIconRenderer } from '../src/native/shared/icons';
 
 afterEach(() => {
   vi.restoreAllMocks();

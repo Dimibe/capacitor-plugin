@@ -1,7 +1,7 @@
-import { observeVerticalBarsModals, movingModal, modalMotionEvent } from '../packages/capacitor-native-ui/src/native/shared/modal';
+import { observeVerticalBarsModals, movingModal, modalMotionEvent } from '../src/native/shared/modal';
 import { afterEach, expect, test, vi } from 'vitest';
-import { coverOverlayBackground, usesCoveredBackground } from '../packages/capacitor-native-ui/src/native/overlays/covered-overlay';
-import type { CoveredSnapshots } from '../packages/capacitor-native-ui/src/native/shared/covered-snapshot';
+import { coverOverlayBackground, usesCoveredBackground } from '../src/native/overlays/covered-overlay';
+import type { CoveredSnapshots } from '../src/native/shared/covered-snapshot';
 
 afterEach(() => document.body.replaceChildren());
 test('presentation never waits for the bridge or changes Ionic visibility/animation', () => {

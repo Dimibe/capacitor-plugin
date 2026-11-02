@@ -36,7 +36,7 @@ jobs:
         working-directory: plugin
       - name: Pack candidate
         working-directory: plugin
-        run: npm pack --workspace packages/capacitor-native-ui --ignore-scripts --pack-destination "$RUNNER_TEMP"
+        run: npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP"
       - name: Test real theme demo against candidate archive
         working-directory: theme
         run: npm run test:native-candidate -- "$RUNNER_TEMP"/rdlabo-capacitor-native-ui-*.tgz --e2e
