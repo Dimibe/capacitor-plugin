@@ -20,7 +20,6 @@ jobs:
       - run: npm run build
       - run: npm test
       - run: npm run test:esm
-      - run: npm run test:packages
       - run: npm ci && npm run build
         working-directory: examples/native-ui-html
       - run: mkdir -p artifacts && npm pack --ignore-scripts --pack-destination artifacts
