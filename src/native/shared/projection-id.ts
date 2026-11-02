@@ -1,2 +1,1 @@
-/** Internal identity used to anchor overlays to their native control. */
-export const projectionIds = new WeakMap<Element, string>();
+export * from '../../../packages/native-ui-core/dist/native/shared/projection-id.js';

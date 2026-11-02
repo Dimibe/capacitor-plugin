@@ -1,1 +1,2 @@
-export * from './native/index.js';
+import './host.js';
+export * from '../packages/native-ui-core/dist/index.js';

@@ -6,7 +6,7 @@ ENGINE_PROBE=$(mktemp -d)
 trap 'rm -rf "$ENGINE_PROBE"' EXIT
 cp Package.swift "$ENGINE_PROBE/Package.swift"
 cp package.json "$ENGINE_PROBE/package.json"
-mkdir -p "$ENGINE_PROBE/ios/Sources/NativeUIPlugin" "$ENGINE_PROBE/ios/Tests/NativeUIPluginTests"
+mkdir -p "$ENGINE_PROBE/ios/Sources/NativeUIPlugin" "$ENGINE_PROBE/ios/Tests/NativeUIPluginTests" "$ENGINE_PROBE/packages/native-ui-core/ios/Sources/NativeUICore" "$ENGINE_PROBE/packages/native-ui-core/ios/Tests/NativeUICoreTests"
 ENGINE_REQUIREMENT=$(node -p "require('./package.json').dependencies['@webview-native-ui/engine']")
 swift package --package-path "$ENGINE_PROBE" dump-package > "$ENGINE_PROBE/manifest.json"
 node --input-type=module - "$ENGINE_PROBE/manifest.json" "$ENGINE_REQUIREMENT" <<'JS'
@@ -19,4 +19,12 @@ assert.equal(dependency.location.remote[0].urlString, 'https://github.com/webvie
 assert.equal(requirement, '^1.0.0', 'Engine npm dependency must allow compatible 1.x updates');
 assert.deepEqual(dependency.requirement.range, [{ lowerBound: '1.0.0', upperBound: '2.0.0' }]);
 assert(!manifest.dependencies.some(entry => entry.fileSystem), 'Installed plugin must not require sibling npm Swift sources');
+assert.deepEqual(manifest.products.find(p => p.name === 'NativeUICore')?.targets, ['NativeUICore']);
+assert.deepEqual(manifest.products.find(p => p.name === 'RdlaboCapacitorNativeUi')?.targets, ['NativeUIPlugin']);
+const core = manifest.targets.find(t => t.name === 'NativeUICore');
+assert.equal(core.path, 'packages/native-ui-core/ios/Sources/NativeUICore');
+assert.equal(core.dependencies.length, 1, 'Core must not link a host SDK');
+assert.equal(core.dependencies[0].product[0], 'WebViewNativeUIEngine');
+const plugin = manifest.targets.find(t => t.name === 'NativeUIPlugin');
+assert(plugin.dependencies.some(d => d.byName?.[0] === 'NativeUICore'), 'Adapter must use the shared Core module');
 JS

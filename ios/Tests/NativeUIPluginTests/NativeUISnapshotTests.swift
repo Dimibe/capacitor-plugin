@@ -3,6 +3,7 @@ import WebKit
 import SwiftUI
 import Capacitor
 @testable import NativeUIPlugin
+@testable import NativeUICore
 
 final class NativeUISnapshotTests: XCTestCase {
     @MainActor func testMeasuredTabWidthTracksNativeContentWithAndWithoutSearch() async throws {

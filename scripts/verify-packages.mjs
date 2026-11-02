@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import ts from 'typescript';
+import { buildSync } from 'esbuild';
 import { execFileSync } from 'node:child_process';
 import { cpSync, mkdtempSync, rmSync, existsSync, mkdirSync, symlinkSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -10,9 +11,9 @@ const dir = mkdtempSync(join(tmpdir(), 'ionic-theme-packages-'));
 const sourceFiles = ['package.json', 'package-lock.json'];
 const originals = sourceFiles.map((file) => readFileSync(file, 'utf8'));
 try {
-  const packed = Object.values(JSON.parse(
-    execFileSync('npm', ['pack', '--ignore-scripts', '--json', '--pack-destination', dir], { encoding: 'utf8' }),
-  ));
+  const packed = Object.values(
+    JSON.parse(execFileSync('npm', ['pack', '--ignore-scripts', '--json', '--pack-destination', dir], { encoding: 'utf8' })),
+  );
   assert.equal(packed.length, 1);
   sourceFiles.forEach((file, index) => assert.equal(readFileSync(file, 'utf8'), originals[index], `${file} changed while packing`));
   const nativeName = '@rdlabo/capacitor-native-ui';
@@ -29,6 +30,18 @@ try {
     symlinkSync(packageRoot, dependencyPath, 'dir');
     symlinkSync(join(dir, 'node_modules'), join(packageRoot, 'node_modules'), 'dir');
     const files = new Set(archive.files.map((file) => file.path));
+
+    // Theme E2E fixtures also bundle the distributed TypeScript source directly.
+    // Resolve it from the archive without access to the private workspace package.
+    buildSync({
+      entryPoints: [join(packageRoot, 'src/index.ts'), join(packageRoot, 'src/native/runtime.ts')],
+      bundle: true,
+      write: false,
+      outdir: join(dir, 'source-bundle'),
+      format: 'esm',
+      platform: 'browser',
+      external: [...Object.keys(manifest.dependencies ?? {}), ...Object.keys(manifest.peerDependencies ?? {})],
+    });
 
     // Locally installed dependencies must not hide undeclared runtime imports.
     const dependencies = new Set([...Object.keys(manifest.dependencies ?? {}), ...Object.keys(manifest.peerDependencies ?? {})]);
@@ -71,7 +84,12 @@ try {
       assert.equal(manifest.capacitor.ios.src, 'ios');
       assert.equal(manifest.capacitor.android.src, 'android');
       assert(files.has('Package.swift'));
-      assert(readFileSync(join(packageRoot, 'Package.swift'), 'utf8').includes('name: "RdlaboCapacitorNativeUi"'), 'Capacitor-generated SPM product must exist');
+      assert(
+        readFileSync(join(packageRoot, 'Package.swift'), 'utf8').includes('name: "RdlaboCapacitorNativeUi"'),
+        'Capacitor-generated SPM product must exist',
+      );
+      assert(files.has('packages/native-ui-core/ios/Sources/NativeUICore/NativeUIController.swift'));
+      assert(files.has('android/src/main/java/shared-core/dev/rdlabo/nativeui/core/NativeUIController.kt'));
       assert(files.has('android/build.gradle'));
       assert(files.has('android/proguard-rules.pro'));
       assert(files.has('RdlaboCapacitorNativeUi.podspec'));
@@ -79,10 +97,11 @@ try {
       assert(files.has('android/src/main/java/dev/rdlabo/capacitor/nativeui/NativeUIPlugin.kt'));
       // The published JavaScript and native binaries must register the same bridge.
       for (const [file, registration] of [
-        ['src/native/activation.ts', "registerPlugin<NativeUIPlugin>('NativeUI')"],
+        ['src/host.ts', "registerPlugin<NativeUIPlugin>('NativeUI')"],
         ['ios/Sources/NativeUIPlugin/NativeUIPlugin.swift', 'jsName = "NativeUI"'],
         ['android/src/main/java/dev/rdlabo/capacitor/nativeui/NativeUIPlugin.kt', '@CapacitorPlugin(name = "NativeUI")'],
-      ]) assert(readFileSync(join(packageRoot, file), 'utf8').includes(registration), `Bridge registration mismatch: ${file}`);
+      ])
+        assert(readFileSync(join(packageRoot, file), 'utf8').includes(registration), `Bridge registration mismatch: ${file}`);
 
       assert(!manifest.dependencies?.['@rdlabo/ionic-theme-ios27'], 'Native UI must not depend on the theme');
       assert(!files.has('dist/esm/native-integration/transition.js'), 'Ionic transition adapter belongs to the theme');
@@ -92,9 +111,15 @@ try {
   assert.equal(manifests.get(nativeName).peerDependenciesMeta['@ionic/core'].optional, true);
   assert(manifests.get(nativeName).dependencies['@rdlabo/ionic-theme-utils'], 'Native UI must install its own Ionic utilities');
   assert.equal(manifests.get(nativeName).peerDependencies['@rdlabo/ionic-theme-utils'], undefined);
+  assert(!manifests.get(nativeName).dependencies['@webview-native-ui/core'], 'Core must ship inside the plugin');
   cpSync(resolve('node_modules/@webview-native-ui/engine'), join(dir, 'node_modules/@webview-native-ui/engine'), { recursive: true });
   symlinkSync(resolve('node_modules/@capacitor'), join(dir, 'node_modules/@capacitor'), 'dir');
-  execFileSync(process.execPath, ['--input-type=module', '-e', `
+  execFileSync(
+    process.execPath,
+    [
+      '--input-type=module',
+      '-e',
+      `
     import assert from 'node:assert/strict';
     import { enableNativeUI } from '@rdlabo/capacitor-native-ui/core';
     import { enableSupportIonicOverlays } from '@webview-native-ui/engine/ionic';
@@ -103,9 +128,33 @@ try {
     assert.equal(enableSupportIonicOverlays(), undefined); // Safe without a Document (SSR).
     await assert.rejects(import('@ionic/core'), { code: 'ERR_MODULE_NOT_FOUND' });
     await assert.rejects(import('@rdlabo/ionic-theme-utils'), { code: 'ERR_MODULE_NOT_FOUND' });
-  `], { cwd: dir, stdio: 'inherit' });
+  `,
+    ],
+    { cwd: dir, stdio: 'inherit' },
+  );
+  // Source fixtures and public entrypoints can coexist in one consumer bundle.
+  const mixedConsumer = join(dir, 'mixed-consumer.mjs');
+  buildSync({
+    stdin: {
+      contents: `
+        import { enableNativeUI as source } from './node_modules/@rdlabo/capacitor-native-ui/src/core.ts';
+        import { enableNativeUI as published } from '@rdlabo/capacitor-native-ui/core';
+        if (source !== published) throw new Error('Source and public entries must share Core state');
+      `,
+      resolveDir: dir,
+      loader: 'ts',
+    },
+    bundle: true,
+    outfile: mixedConsumer,
+    format: 'esm',
+    platform: 'node',
+    external: ['@capacitor/core'],
+  });
+  execFileSync(process.execPath, [mixedConsumer], { cwd: dir, stdio: 'inherit' });
   const consumer = join(dir, 'consumer.ts');
-  writeFileSync(consumer, `
+  writeFileSync(
+    consumer,
+    `
     import { enableNativeUI } from '@rdlabo/capacitor-native-ui/core';
     import { createWebProjection, createWebProjectionScope, type WebProjectionTransport } from '@webview-native-ui/engine';
     import { enableSupportIonicOverlays } from '@webview-native-ui/engine/ionic';
@@ -159,8 +208,26 @@ try {
     enableNativeUI({ controls: 'vertical' });
     // @ts-expect-error Availability is automatic; enabled is boolean only.
     enableNativeUI({ verticalBars: { enabled: 'auto' } });
-  `);
-  execFileSync(process.execPath, [resolve('node_modules/typescript/bin/tsc'), '--noEmit', '--strict', '--module', 'esnext', '--moduleResolution', 'bundler', '--target', 'es2022', '--lib', 'es2022,dom', consumer], {cwd: dir, stdio: 'inherit'});
+  `,
+  );
+  execFileSync(
+    process.execPath,
+    [
+      resolve('node_modules/typescript/bin/tsc'),
+      '--noEmit',
+      '--strict',
+      '--module',
+      'esnext',
+      '--moduleResolution',
+      'bundler',
+      '--target',
+      'es2022',
+      '--lib',
+      'es2022,dom',
+      consumer,
+    ],
+    { cwd: dir, stdio: 'inherit' },
+  );
   // Only external dependencies come from this checkout; all packages resolve from archives.
   for (const name of ['@ionic', '@stencil', '@rdlabo/ionic-theme-utils', 'ionicons', 'typescript']) {
     symlinkSync(resolve('node_modules', name), join(dir, 'node_modules', name), 'dir');
@@ -184,11 +251,18 @@ try {
     ],
     { cwd: dir, stdio: 'inherit' },
   );
-  execFileSync(process.execPath, ['-e', `
+  execFileSync(
+    process.execPath,
+    [
+      '-e',
+      `
     const assert = require('node:assert/strict');
     const native = require('@rdlabo/capacitor-native-ui');
     assert.equal(typeof native.enableNativeUI, 'function');
-  `], { cwd: dir, stdio: 'inherit' });
+  `,
+    ],
+    { cwd: dir, stdio: 'inherit' },
+  );
   if (process.argv.includes('--esm')) {
     for (const archive of packed) {
       execFileSync(

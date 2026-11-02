@@ -1,1 +1,1 @@
-export { projectionAncestors, fitsClip } from '@webview-native-ui/engine';
+export * from '../../../packages/native-ui-core/dist/native/shared/clipping.js';

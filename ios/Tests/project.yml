@@ -29,6 +29,8 @@ targets:
       - target: TestHost
       - package: NativeUI
         product: RdlaboCapacitorNativeUi
+      - package: NativeUI
+        product: NativeUICore
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.ionic.nativeui.hostedtests

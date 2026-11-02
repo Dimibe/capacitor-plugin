@@ -1,11 +1,1 @@
-import type { CoveredSnapshots } from '../shared/covered-snapshot.js';
-
-export { usesOverlayBackdrop as usesCoveredBackground } from '@webview-native-ui/engine';
-import { usesOverlayBackdrop as usesCoveredBackground } from '@webview-native-ui/engine';
-
-/** The prepared image is optional; Ionic presentation never waits for it. */
-export const coverOverlayBackground = (element: HTMLElement, snapshots: CoveredSnapshots) => {
-  if (usesCoveredBackground(element))
-    snapshots.begin(element.matches('ion-modal') ? (element as HTMLIonModalElement).presentingElement : undefined);
-  else snapshots.retireRestoration();
-};
+export * from '../../../packages/native-ui-core/dist/native/overlays/covered-overlay.js';

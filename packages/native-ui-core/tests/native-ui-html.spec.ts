@@ -10,6 +10,8 @@ import type { NativeUIRuntimeHandle, NativeUIRuntimeOptions, NativeUIPlugin, Nat
 
 let owners: Set<HTMLElement>, visibleOwners: Set<HTMLElement>, preparedOwners: Set<HTMLElement>;
 beforeEach(() => {
+  // File serving belongs to the host, not to Core or an implicitly loaded SDK.
+  vi.stubGlobal('WkWebView', { convertFilePath: (url: string) => url });
   ({ owners, visibleOwners, preparedOwners } = mockSnapshotOwnership(projectionState));
 });
 

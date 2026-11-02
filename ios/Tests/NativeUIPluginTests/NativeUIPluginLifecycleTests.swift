@@ -3,6 +3,7 @@ import Capacitor
 import UIKit
 import WebKit
 @testable import NativeUIPlugin
+@testable import NativeUICore
 
 final class NativeUIPluginLifecycleTests: XCTestCase {
     @MainActor func testOrientationNotificationsKeepProjectedControlsVisibleWithoutLayoutChanges() async throws {

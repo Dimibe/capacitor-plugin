@@ -54,21 +54,27 @@
     "RdlaboCapacitorNativeUi.podspec",
     "LICENSE",
     "README.md",
-    "docs"
+    "docs",
+    "packages/native-ui-core/dist/",
+    "packages/native-ui-core/src/",
+    "packages/native-ui-core/ios/Sources/",
+    "packages/native-ui-core/ios/Tests/"
   ],
   "scripts": {
-    "build": "npm run clean && npm run docgen && tsc && rollup -c rollup.config.mjs",
-    "test": "vitest run",
-    "test:packages": "node scripts/verify-packages.mjs",
+    "build": "npm run build --workspace @webview-native-ui/core && npm run sync:core && npm run clean && npm run docgen && tsc && node scripts/embed-core.mjs && rollup -c rollup.config.mjs",
+    "test": "npm run test --workspace @webview-native-ui/core && vitest run",
+    "test:packages": "npm run check:core && node scripts/verify-packages.mjs",
     "test:esm": "node scripts/verify-packages.mjs --esm",
-    "lint": "prettier --check \"./**/*.{scss,ts,md}\" && prettier --parser angular --check \"./**/*.html\"",
+    "lint": "prettier --check \"./**/*.{scss,ts,md}\" && prettier --parser angular --check \"./**/*.html\" && npm run check:boundary --workspace @webview-native-ui/core",
     "fmt": "prettier --write \"./**/*.{scss,ts,md}\" && prettier --parser angular --write \"./**/*.html\"",
     "release": "np --no-tests --no-publish --branch main",
     "clean": "rm -rf dist",
     "docgen": "docgen --project tsconfig.docgen.json --api NativeUIHandle --output-readme docs/native-ui.md && docgen --project tsconfig.docgen.json --api VerticalControlAreaHandle --output-readme docs/vertical-bars.md",
     "prepublishOnly": "npm run build",
-    "watch": "tsc --watch",
-    "verify:web": "npm run build && npm test && npm run test:esm"
+    "watch": "node --watch --watch-path=src --watch-path=packages/native-ui-core/src scripts/watch-build.mjs",
+    "verify:web": "npm run build && npm test && npm run test:esm",
+    "sync:core": "node scripts/sync-core-native.mjs",
+    "check:core": "node scripts/sync-core-native.mjs --check"
   },
   "publishConfig": {
     "access": "public"
@@ -100,19 +106,22 @@
   "devDependencies": {
     "@capacitor/android": "^8.5.3",
     "@capacitor/core": "^8.5.2",
+    "@capacitor/ios": "^8.5.2",
+    "@ionic/core": "8.8.19",
     "@rdlabo/capacitor-docgen": "^0.4.1",
+    "@rollup/plugin-node-resolve": "^16.0.0",
+    "esbuild": "0.28.1",
     "husky": "^9.1.7",
+    "jsdom": "^26.0.0",
     "lint-staged": "^16.2.1",
     "np": "^10.2.0",
     "prettier": "^3.6.2",
-    "typescript": "^5.9.3",
-    "esbuild": "0.28.1",
-    "@ionic/core": "8.8.19",
-    "@capacitor/ios": "^8.5.2",
-    "vitest": "^4.0.0",
-    "jsdom": "^26.0.0",
     "rollup": "^4.53.2",
-    "@rollup/plugin-node-resolve": "^16.0.0"
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.0"
   },
-  "unpkg": "./dist/plugin.js"
+  "unpkg": "./dist/plugin.js",
+  "workspaces": [
+    "packages/native-ui-core"
+  ]
 }

@@ -1,0 +1,66 @@
+{
+  "author": "Masahiko Sakakibara <sakakibara@rdlabo.jp>",
+  "license": "MIT",
+  "type": "module",
+  "name": "@webview-native-ui/core",
+  "version": "0.1.0",
+  "description": "Host-independent WebView native controls, DOM synchronization and rendering",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./core": {
+      "types": "./dist/core.d.ts",
+      "import": "./dist/core.js"
+    },
+    "./host": {
+      "types": "./dist/host.d.ts",
+      "import": "./dist/host.js"
+    },
+    "./integration": {
+      "types": "./dist/native-integration/index.d.ts",
+      "import": "./dist/native-integration/index.js"
+    },
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "import": "./dist/*.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "ios/Sources",
+    "android/src/main",
+    "LICENSE",
+    "README.md",
+    "ios/Tests"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.json",
+    "test": "vitest run",
+    "check:boundary": "node scripts/check-boundary.mjs",
+    "prepack": "npm run build && npm run check:boundary",
+    "lint": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\" \"scripts/*.mjs\" && npm run check:boundary"
+  },
+  "dependencies": {
+    "@rdlabo/ionic-theme-utils": "0.1.5",
+    "@webview-native-ui/engine": "^1.0.0"
+  },
+  "peerDependencies": {
+    "@ionic/core": ">=8.8.1 <10"
+  },
+  "peerDependenciesMeta": {
+    "@ionic/core": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@ionic/core": "^8.8.19",
+    "jsdom": "^26.0.0",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.0"
+  },
+  "private": true
+}

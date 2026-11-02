@@ -1,4 +1,1 @@
-export interface FoldState {
-  state: 'flat' | 'half-opened' | 'closed';
-  hingeBounds?: { x: number; y: number; width: number; height: number };
-}
+export * from '../../../packages/native-ui-core/dist/native/foldable/types.js';

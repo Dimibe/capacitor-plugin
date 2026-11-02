@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.build/
+.swiftpm/
+Package.resolved
+android/build/
+android/.gradle/
+*.tgz
+
+artifacts/
+android/.kotlin/

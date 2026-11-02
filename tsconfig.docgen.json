@@ -2,5 +2,5 @@
   "compilerOptions": {
     "strict": true
   },
-  "files": ["src/native/definitions.ts"]
+  "files": ["packages/native-ui-core/src/native/definitions.ts"]
 }

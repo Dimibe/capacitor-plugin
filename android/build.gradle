@@ -52,6 +52,8 @@ android {
             androidTest.java.srcDirs += 'fixtures/androidTest/java'
         }
     }
+    // Keep shared regression tests in the existing CI unit-test task.
+    sourceSets.test.java.srcDirs += '../packages/native-ui-core/android/src/test/java'
     buildFeatures { compose true }
     kotlinOptions { jvmTarget = '21' }
     compileOptions {

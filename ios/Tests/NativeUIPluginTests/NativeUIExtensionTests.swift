@@ -2,6 +2,7 @@ import XCTest
 import SwiftUI
 import WebKit
 @testable import NativeUIPlugin
+@testable import NativeUICore
 
 final class NativeUIExtensionTests: XCTestCase {
     struct Props: Decodable { let title: String }
