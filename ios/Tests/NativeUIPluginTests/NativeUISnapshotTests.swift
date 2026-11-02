@@ -176,7 +176,11 @@ final class NativeUISnapshotTests: XCTestCase {
         rail.apply(try page("old-action"), rendering: NativeUIControlRendering(), edge: "right", animated: false)
         try await Task.sleep(nanoseconds: 500_000_000)
         var events: [String] = []
-        let host = NativeUIOverlayHost(configuration: WKWebViewConfiguration(), options: ["animated": false], event: { events.append($0) })
+        let dismissed = expectation(description: "Native popover dismissal reaches Web")
+        let host = NativeUIOverlayHost(configuration: WKWebViewConfiguration(), options: ["animated": false], event: {
+            events.append($0)
+            if $0 == "dismiss" { dismissed.fulfill() }
+        })
         host.preferredContentSize = CGSize(width: 180, height: 180)
         XCTAssertTrue(rail.presentPopover(anchor: "old-action", host: host, completion: { _ in }))
         for _ in 0..<50 {
@@ -185,7 +189,7 @@ final class NativeUISnapshotTests: XCTestCase {
         }
         XCTAssertTrue(host.anchoredVisible, "Fixture must display the actual SwiftUI popover")
         host.dismissAnchored?()
-        try await Task.sleep(nanoseconds: 1_000_000_000)
+        await fulfillment(of: [dismissed], timeout: 15)
         XCTAssertEqual(events, ["dismiss"], "Native closure must release the Web projection lease")
         XCTAssertTrue(host.disappeared)
         XCTAssertTrue(rail.presentPopover(anchor: "old-action", host: host, completion: { _ in }), "Reconnect the retained content without recreating its WebView")
