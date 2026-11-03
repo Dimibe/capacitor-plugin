@@ -242,3 +242,30 @@ test.each(['true', 'false'] as const)('back selection ignores group attribute %s
     document.body.innerHTML = '';
   }
 });
+
+test.each(['ion-cloned-element', 'data-native-ui-proxy'])('prehide never captures generated %s sources', async (marker) => {
+  document.body.innerHTML = markup;
+  const app = document.querySelector('ion-app')!;
+  const generated = document.createElement('div');
+  if (marker === 'data-native-ui-proxy') generated.setAttribute(marker, 'button');
+  generated.innerHTML = '<ion-back-button class="ios hydrated"></ion-back-button>';
+  const clone = generated.querySelector<HTMLElement>('ion-back-button')!;
+  if (marker === 'ion-cloned-element') clone.classList.add(marker);
+  clone.attachShadow({ mode: 'open' });
+  const original = clone.outerHTML;
+  const controller = prehideVerticalBarsToolbarSources(document);
+  try {
+    // A generated root control can mount after the original page was captured.
+    app.append(generated);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(clone.outerHTML).toBe(original);
+    expect(document.querySelector('ion-buttons')!.classList.contains(prehiddenClass)).toBe(true);
+    // Proxy synchronization and unrelated page mutations must not cause recapture.
+    window.dispatchEvent(new Event('nativeUIRefresh'));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(clone.outerHTML).toBe(original);
+  } finally {
+    controller.stop();
+    document.body.replaceChildren();
+  }
+});

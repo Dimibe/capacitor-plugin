@@ -22,7 +22,9 @@ import {
 } from './shared/dom.js';
 
 const overlays = 'ion-menu, ion-popover';
-const sourceSelector = 'ion-back-button, ion-menu-button, ion-buttons, ion-button';
+// Only application sources participate in placement capture; adapters own generated targets.
+const sourceSelector =
+  ':is(ion-back-button, ion-menu-button, ion-buttons, ion-button):not(.ion-cloned-element, .ion-cloned-element *, [data-native-ui-proxy], [data-native-ui-proxy] *)';
 // Realm- and teardown-safe: globals such as Element/HTMLElement may be gone
 // when a queued mutation microtask or a stale listener still runs.
 const isHtmlElement = (node: unknown): node is HTMLElement => !!node && (node as Node).nodeType === 1;
