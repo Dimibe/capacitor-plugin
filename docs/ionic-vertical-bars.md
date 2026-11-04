@@ -226,7 +226,6 @@ const layout = await resolveVerticalBarsLayout(provider, {
 });
 ```
 
-The shared geometry export requires Engine 1.1. Release that Engine version and update this
-package's minimum Engine dependency and registry lockfile before publishing this adapter change.
-The existing theme's `setVerticalBarsLayout` remains the owner of CSS and defaults; applying
-`toolbarTop` requires its corresponding input extension.
+The boundary geometry ships inside this package's integration entry; no Engine release is
+required for the layout resolver itself. The existing theme's `setVerticalBarsLayout` remains
+the owner of CSS and defaults; applying `toolbarTop` requires its corresponding input extension.

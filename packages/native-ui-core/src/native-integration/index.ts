@@ -69,3 +69,4 @@ export {
   type VerticalBarsLayoutContext,
   type ResolvedVerticalBarsLayout,
 } from './vertical-bars-layout.js';
+export { reservedVerticalBarBoundary, type NativeUIReservedRegion } from './reserved-regions.js';

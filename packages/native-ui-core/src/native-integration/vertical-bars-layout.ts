@@ -1,4 +1,4 @@
-import { reservedVerticalBarBoundary, type NativeUIReservedRegion } from '@webview-native-ui/engine/integration';
+import { reservedVerticalBarBoundary, type NativeUIReservedRegion } from './reserved-regions.js';
 
 /** Structural source: no dependency on a specific device plugin. */
 export interface VerticalBarsLayoutProvider {

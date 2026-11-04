@@ -1,6 +1,6 @@
 import { expect, test, vi, afterEach } from 'vitest';
 import { resolveVerticalBarsLayout } from '../src/native-integration/vertical-bars-layout';
-import type { NativeUIReservedRegion } from '@webview-native-ui/engine/integration';
+import { reservedVerticalBarBoundary, type NativeUIReservedRegion } from '../src/native-integration/reserved-regions';
 const region = (height: number): NativeUIReservedRegion => ({
   kind: 'occlusion',
   isActive: true,
@@ -122,4 +122,22 @@ test('SSR can resolve explicit geometry without browser or native SDK globals', 
   } finally {
     vi.unstubAllGlobals();
   }
+});
+
+test('the boundary helper ignores margins, unusable inputs and non-rail regions without reading globals', () => {
+  const top = (regions?: readonly NativeUIReservedRegion[]) => reservedVerticalBarBoundary(regions, 'right', 466, 678);
+  expect(top()).toBeUndefined();
+  expect(top([])).toBeUndefined();
+  expect(reservedVerticalBarBoundary([region(174)], 'right', Number.NaN, 678)).toBeUndefined();
+  expect(reservedVerticalBarBoundary([region(174)], 'right', 466, 0)).toBeUndefined();
+  expect(top([region(174)])).toBe(174);
+  expect(top([region(120)])).toBe(120);
+  const irrelevant = [
+    { ...region(300), isActive: false },
+    { ...region(678), kind: 'division' as const },
+    { ...region(78), y: 600 },
+    { ...region(200), height: Number.NaN },
+  ];
+  expect(top(irrelevant)).toBeUndefined();
+  expect(top([...irrelevant, region(174)])).toBe(174);
 });
