@@ -205,10 +205,7 @@ await applyLayout();
 await Foldable.addListener('barPlacementChange', applyLayout);
 ```
 
-Call this from the application's existing initial/device-change handler. A single
-`barPlacementChange` listener covers re-resolution: it fires whenever the values this
-resolver reads can change, including opening, closing and rotating a foldable, so no
-additional device subscriptions are needed.
+Call this from the application's existing initial/device-change handler.
 
 The SDK-free
 resolver returns only `edge`, `inset` and `toolbarTop`; it does not start Native UI,
