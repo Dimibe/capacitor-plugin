@@ -23,7 +23,8 @@ export const resolveVerticalBarsLayout = async (provider: LayoutProvider) => {
   const edge = bars?.verticalBarEdge;
   let toolbarTop: number | undefined;
   if (edge && typeof window !== 'undefined' && window.innerWidth > 0 && window.innerHeight > 0) {
-    const rtl = typeof document !== 'undefined' && document.documentElement.dir === 'rtl';
+    const root = typeof document === 'undefined' ? undefined : (document.querySelector('ion-app') ?? document.documentElement);
+    const rtl = root?.closest('[dir]')?.getAttribute('dir') === 'rtl';
     const left = (edge === 'leading') !== rtl;
     for (const { x, y, width, height, kind, isActive } of regions ?? []) {
       if (

@@ -209,4 +209,4 @@ requires the corresponding theme input extension.
 
 Provider frames and insets must use the browser viewport's CSS pixels. Foldable's
 points match the usual device-width, initial-scale=1 viewport; other scales require
-a normalized provider. The document direction determines the physical rail side.
+a normalized provider. The nearest `dir` on `ion-app` or its ancestors determines the physical rail side, matching the theme; without `ion-app`, the document direction is used.

@@ -13,6 +13,7 @@ const region = (height: number) => ({
 afterEach(() => {
   vi.unstubAllGlobals();
   document.documentElement.removeAttribute('dir');
+  document.body.replaceChildren();
 });
 const viewport = (width = 466, height = 678) => vi.stubGlobal('window', { innerWidth: width, innerHeight: height });
 
@@ -60,6 +61,21 @@ test('uses document direction and accepts already normalized CSS coordinates', a
       getReservedRegions: async () => ({ regions: [{ ...region(348), x: 0, width: 168 }] }),
     }),
   ).toEqual({ edge: 'trailing', inset: 168, toolbarTop: 348 });
+});
+
+test.each([
+  ['ltr', '<ion-app dir="rtl"></ion-app>', 124],
+  ['rtl', '<ion-app dir="ltr"></ion-app>', 174],
+  ['ltr', '<main dir="rtl"><ion-app></ion-app></main>', 124],
+] as const)('uses the app’s nearest direction over document %s', async (direction, markup, toolbarTop) => {
+  viewport();
+  document.documentElement.dir = direction;
+  document.body.innerHTML = markup;
+  const result = await resolveVerticalBarsLayout({
+    getBarPlacement: async () => ({ verticalBarEdge: 'trailing', inset: 84 }),
+    getReservedRegions: async () => ({ regions: [region(174), { ...region(124), x: 0 }] }),
+  });
+  expect(result.toolbarTop).toBe(toolbarTop);
 });
 
 test('only active top reservations on the rail affect the result, with no fixed fallback', async () => {
