@@ -170,6 +170,7 @@ struct NativeUIBadge: Decodable, Equatable {
 struct NativeUIItemContent: Decodable, Equatable {
     enum IconPosition: String, Decodable { case leading, trailing, top }
     enum ButtonFill: String, Decodable { case clear, solid, outline }
+    enum ButtonStyle: String, Decodable { case prominent }
     let id: String
     let transitionId: String?
     var label: String
@@ -180,6 +181,7 @@ struct NativeUIItemContent: Decodable, Equatable {
     let fontWeight: Double
     let color: String
     let buttonFill: ButtonFill?
+    let buttonStyle: ButtonStyle?
     let backgroundColor: String?
     let borderColor: String?
     let borderWidth: CGFloat?

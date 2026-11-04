@@ -2,10 +2,10 @@ import { getProjectionState } from './shared/covered-source.js';
 import { fitsClip } from './shared/clipping.js';
 import type { NativeUIRuntimeOptions, NativeUIRuntimeHandle } from './definitions.js';
 import { appendItem, createCandidate, type Candidate, type Identify } from './shared/candidate.js';
-import { marker, unprojected, visible } from './shared/dom.js';
+import { explicitSourceSelector, marker, unprojected, visible } from './shared/dom.js';
 
 /** Standard HTML sources use standard native renderers, not app-local Swift extensions. */
-export const htmlSelector = '[data-native-ui="button"], [data-native-ui="back-button"]';
+export const htmlSelector = explicitSourceSelector;
 export const htmlRailSource = (element: Element) =>
   element.matches(htmlSelector) && element.getAttribute('data-native-ui-placement') === 'rail';
 

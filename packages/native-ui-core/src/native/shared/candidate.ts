@@ -90,6 +90,9 @@ export const appendItem = (
           : 'source'
         : candidate.buttonProjection;
   const systemButton = projection !== 'source' && isVerticalBarsSource(child) && child.matches('ion-button, ion-menu-button');
+  // A prominent glass button tints from its resolved color, so it cannot use the
+  // system projection's template 'currentColor'.
+  const prominent = child.getAttribute('data-native-ui') === 'button-submit';
   // Ionic defaults buttons inside ion-buttons to clear, even when the app defaults to solid.
   const defaultFill = child.closest('ion-buttons') ? 'clear' : candidate.buttonDefaultFill;
   const fill = !sourceFill || sourceFill === 'default' ? defaultFill : sourceFill;
@@ -117,9 +120,10 @@ export const appendItem = (
     selected: !!(child as ItemElement).selected,
     fontSize: parseFloat(labelStyle.fontSize),
     fontWeight: parseInt(labelStyle.fontWeight, 10) || 400,
-    color: systemButton ? 'currentColor' : getComputedStyle(native ?? child).color,
+    color: systemButton && !prominent ? 'currentColor' : getComputedStyle(native ?? child).color,
     iconTemplate: systemButton ? true : undefined,
     buttonFill,
+    buttonStyle: prominent ? 'prominent' : undefined,
     backgroundColor: buttonFill === 'solid' ? getComputedStyle(native ?? child).backgroundColor : undefined,
     borderColor: outline?.borderTopColor,
     borderWidth: outline ? parseFloat(outline.borderTopWidth) : undefined,

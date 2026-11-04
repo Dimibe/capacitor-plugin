@@ -104,11 +104,10 @@ export const isDisabledButtonGroupChild = (element: HTMLElement): boolean =>
 
 const verticalBarsTags = new Set(['ion-button', 'ion-back-button', 'ion-buttons', 'ion-menu-button', 'ion-tab-bar']);
 
+export const explicitSourceSelector = '[data-native-ui="button"], [data-native-ui="back-button"], [data-native-ui="button-submit"]';
 export const isVerticalBarsSource = (element: HTMLElement): boolean =>
   !element.closest('[data-native-ui-placement="element"]') &&
-  (element.matches(
-    '[data-native-ui-placement="rail"][data-native-ui="button"], [data-native-ui-placement="rail"][data-native-ui="back-button"]',
-  ) ||
+  (element.matches(`[data-native-ui-placement="rail"]:is(${explicitSourceSelector})`) ||
     (verticalBarsTags.has(element.localName) &&
       (element.matches('ion-tab-bar') || verticalBarsOwned(element)) &&
       !element.closest('ion-menu, ion-popover') &&
@@ -184,8 +183,8 @@ const overlays = 'ion-menu, ion-popover';
 
 /** Shared eligibility for a toolbar action candidate, before placement is decided (prehide) or consumed (projection). */
 export const verticalBarsActionCandidate = (element: HTMLElement): boolean =>
-  !element.matches('[data-native-ui="button"], [data-native-ui="back-button"]') &&
-  !element.querySelector('[data-native-ui="button"], [data-native-ui="back-button"]') &&
+  !element.matches(explicitSourceSelector) &&
+  !element.querySelector(explicitSourceSelector) &&
   inFixedToolbar(element) &&
   !element.closest('ion-buttons.ios-theme-horizontal-only, ion-button.ios-theme-horizontal-only') &&
   !isPermanentlyExcluded(element) &&

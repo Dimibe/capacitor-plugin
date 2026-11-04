@@ -61,7 +61,9 @@ final class NativeUIVerticalBarsModel: ObservableObject {
                  // UIKit toolbar extraction uses the UIImage's rendering mode.
                  image: source.content.disabled ? image?.withRenderingMode(.alwaysTemplate) : image,
                  clear: source.content.buttonFill == .clear,
-                 background: source.content.backgroundColor.map { Color(uiColor: rendering.color($0)) },
+                 background: source.content.buttonStyle == .prominent
+                     ? Color(uiColor: rendering.color(source.content.color))
+                     : source.content.backgroundColor.map { Color(uiColor: rendering.color($0)) },
                  borderColor: source.content.borderColor.map { Color(uiColor: rendering.color($0)) },
                  borderWidth: source.content.borderWidth ?? 0,
                  badge: source.content.badge, disabled: source.content.disabled, isBack: isBack,

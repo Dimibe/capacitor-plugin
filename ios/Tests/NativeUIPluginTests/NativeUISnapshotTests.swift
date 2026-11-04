@@ -6,6 +6,23 @@ import Capacitor
 @testable import NativeUICore
 
 final class NativeUISnapshotTests: XCTestCase {
+    @MainActor func testProminentButtonStyleDecodesAndResetsTintWhenReused() throws {
+        guard #available(iOS 26.0, *) else { throw XCTSkip("Requires glass buttons") }
+        let rendering = NativeUIControlRendering()
+        let prominent = try XCTUnwrap(decode([control(["items": [item([
+            "buttonStyle": "prominent", "color": "rgb(12, 34, 56)"
+        ])]])]).controls.first?.items.first?.content)
+        XCTAssertEqual(prominent.buttonStyle, .prominent)
+        let button = NativeUIButton.render(prominent, glass: true, rendering: rendering, activate: { _ in })
+        XCTAssertEqual(button.tintColor, rendering.color(prominent.color))
+        let standard = try XCTUnwrap(decode([control(["items": [item()]])]).controls.first?.items.first?.content)
+        XCTAssertNil(standard.buttonStyle)
+        let reused = NativeUIButton.render(standard, glass: true, existing: button, rendering: rendering, activate: { _ in })
+        XCTAssertTrue(reused === button)
+        XCTAssertEqual(reused.tintColor, UIButton().tintColor)
+        XCTAssertEqual(reused.configuration?.baseForegroundColor, rendering.color(standard.color))
+    }
+
     @MainActor func testMeasuredTabWidthTracksNativeContentWithAndWithoutSearch() async throws {
         guard #available(iOS 26.0, *) else { throw XCTSkip("Requires UISearchTab") }
         let owner = UIViewController()

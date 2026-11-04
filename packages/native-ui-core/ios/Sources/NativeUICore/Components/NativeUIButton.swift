@@ -40,14 +40,16 @@ enum NativeUIButton {
 
     @available(iOS 26.0, *)
     static func render(_ item: NativeUIItemContent, glass: Bool, existing: UIButton? = nil, rendering: NativeUIControlRendering, activate: @escaping (String) -> Void) -> UIButton {
-        var configuration: UIButton.Configuration = glass ? .glass() : .plain()
+        var configuration: UIButton.Configuration = item.buttonStyle == .prominent ? .prominentGlass() : glass ? .glass() : .plain()
         configuration.title = item.label
         configuration.image = rendering.image(item)
         configuration.imagePadding = item.imagePadding ?? 4
         configuration.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: item.contentInsetLeading ?? 4,
                                                             bottom: 0, trailing: item.contentInsetTrailing ?? 4)
         configuration.imagePlacement = item.iconPosition == .trailing ? .trailing : .leading
-        configuration.baseForegroundColor = rendering.color(item.color)
+        // Prominent glass derives its tint from the resolved foreground color and
+        // lets the system supply contrasting content; other styles paint directly.
+        if item.buttonStyle != .prominent { configuration.baseForegroundColor = rendering.color(item.color) }
         configuration.titleLineBreakMode = .byTruncatingTail
         let size = item.fontSize
         let weight = item.fontWeight
@@ -63,6 +65,7 @@ enum NativeUIButton {
         // Absorb that rounding without widening the projected button.
         button.titleLabel?.adjustsFontSizeToFitWidth = true
         button.titleLabel?.minimumScaleFactor = 0.99
+        button.tintColor = item.buttonStyle == .prominent ? rendering.color(item.color) : nil
         button.isEnabled = !item.disabled
         button.accessibilityLabel = item.accessibilityLabel
         button.accessibilityIdentifier = item.id

@@ -36,6 +36,7 @@ The `/core` entry requires `@capacitor/core` but no Ionic dependencies. If this 
 | -------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `data-native-ui`           | `button`            | Project a standard action button.                                                                                  |
 | `data-native-ui`           | `back-button`       | Project a standard back button. The source click handler owns navigation; the plugin never calls `history.back()`. |
+| `data-native-ui`           | `button-submit`     | Project a button with the prominent glass emphasis; the tint derives from the resolved foreground color.           |
 | `data-native-ui`           | `disabled`          | Exclude the element and its subtree from projection.                                                               |
 | `data-native-ui-placement` | `element` (default) | Use the source element's rectangle.                                                                                |
 | `data-native-ui-placement` | `rail`              | Request Vertical Bars; use the optional Web rail host when native rail presentation is unavailable.                |

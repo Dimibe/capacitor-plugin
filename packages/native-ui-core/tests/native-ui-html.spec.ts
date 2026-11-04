@@ -60,6 +60,16 @@ test('HTML adapters produce standard native kinds without Ionic mode or theme va
   expect(readHTMLControl(source, () => 'action', options)).toBeUndefined();
 });
 
+test.each(['button', 'ion-button'])('explicit %s submit emphasis carries resolved color and resets to standard', (tag) => {
+  const { source, options } = mount(`<${tag} data-native-ui="button-submit" data-native-ui-placement="rail">Save</${tag}>`);
+  source.style.color = 'rgb(12, 34, 56)';
+  const candidate = readHTMLControl(source, () => 'save', options)!;
+  expect(candidate.control.kind).toBe('button');
+  expect(candidate.control.items[0]).toMatchObject({ buttonStyle: 'prominent', color: 'rgb(12, 34, 56)' });
+  source.setAttribute('data-native-ui', 'button');
+  expect(readHTMLControl(source, () => 'save', options)!.control.items[0].buttonStyle).toBeUndefined();
+});
+
 test('accessible names and inherited disabled state follow standard HTML semantics', () => {
   const { source, options } = mount(
     '<span id="name">Save changes</span><fieldset disabled><button data-native-ui="button" aria-labelledby="name">Save</button></fieldset>',
