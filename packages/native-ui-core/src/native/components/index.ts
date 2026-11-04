@@ -6,7 +6,7 @@ import * as menuButton from './ion-menu-button.js';
 import * as tabBar from './ion-tab-bar.js';
 import * as segment from './ion-segment.js';
 import * as fab from './ion-fab.js';
-import { isVerticalBarsSource, visible, withoutPrehide } from '../shared/dom.js';
+import { inFixedToolbar, isVerticalBarsSource, visible, withoutPrehide } from '../shared/dom.js';
 import type { Candidate, Identify } from '../shared/candidate.js';
 
 // Static composition only. Each component declares its own tag, discovery and reader.
@@ -29,8 +29,10 @@ export const motionSelector = [
 ].join(', ');
 
 export const isVerticalBarsCandidate = isVerticalBarsSource;
+const fixedToolbarSelector = [button.tag, buttons.tag, menuButton.tag].join(', ');
 
 export const readCandidate = (element: HTMLElement, id: Identify, options: VerticalControlAreaOptions = {}): Candidate | undefined => {
+  if (element.matches(fixedToolbarSelector) && !inFixedToolbar(element)) return;
   const verticalBars = isVerticalBarsCandidate(element);
   if (
     (!element.classList.contains('ios') && !verticalBars) ||

@@ -492,6 +492,29 @@ test('later rejection of an already prepared incoming surface returns it to Web'
   release(true);
 });
 
+test.each([false, true])('toolbar preparation keeps retained sources concealed until completion (cancel=%s)', async (cancel) => {
+  const f = await fixture('Edit', 'Done', true);
+  const source = f.leaving.querySelector('button')!;
+  const target = f.entering.querySelector('button')!;
+  const readSource = vi.spyOn(source, 'getBoundingClientRect');
+  const revealSource = vi.spyOn(source, 'removeAttribute');
+  const revealTarget = vi.spyOn(target, 'removeAttribute');
+  const release = await f.start();
+  expect(f.snapshots.at(-1)?.toolbarTransition?.destination[0].items[0].label).toBe('Done');
+  expect(readSource).not.toHaveBeenCalled();
+  expect(revealSource.mock.calls.filter(([name]) => name === 'data-native-ui-projected')).toHaveLength(0);
+  revealTarget.mockClear();
+  target.textContent = 'Updated';
+  window.dispatchEvent(new Event('nativeUIRefresh'));
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  expect(revealSource.mock.calls.filter(([name]) => name === 'data-native-ui-projected')).toHaveLength(0);
+  expect(revealTarget.mock.calls.filter(([name]) => name === 'data-native-ui-navigation-source')).toHaveLength(0);
+  release(cancel);
+  await vi.waitFor(() => expect(f.snapshots.at(-1)?.toolbarTransition).toBeUndefined());
+  expect(f.snapshots.at(-1)?.controls[0].items[0].label).toBe(cancel ? 'Edit' : 'Updated');
+  expect((cancel ? source : target).hasAttribute('data-native-ui-projected')).toBe(true);
+});
+
 test('toolbar handoff does not measure incoming content controls', async () => {
   const f = await fixture('Edit', 'Save', true);
   const content = document.createElement('ion-content');

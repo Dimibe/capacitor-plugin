@@ -1,4 +1,5 @@
-import { afterEach, expect, test } from 'vitest';
+import { afterEach, expect, test, vi } from 'vitest';
+import { readCandidate } from '../src/native/components';
 import { inFixedToolbar, verticalBarsActionCandidate, verticalBarsBackCandidate, verticalBarsOwned } from '../src/native/shared/dom';
 import { prehideVerticalBarsToolbarSources } from '../src/native/prehide';
 
@@ -7,6 +8,7 @@ afterEach(() => {
   stop?.();
   stop = undefined;
   document.body.replaceChildren();
+  vi.restoreAllMocks();
 });
 
 const fixture = (tag: string, attributes = '', scrolling = false) => {
@@ -85,4 +87,29 @@ test('a standalone routed-content back button retains dedicated rail support', (
   expect(verticalBarsBackCandidate(back)).toBe(true);
   stop = prehideVerticalBarsToolbarSources(document).stop;
   expect(verticalBarsOwned(back)).toBe(true);
+});
+
+test.each([false, true])('content actions are rejected before style or layout reads (vertical: %s)', (vertical) => {
+  document.body.innerHTML = `<ion-app class="${vertical ? 'ios-theme-vertical-bars' : ''}"><main class="ion-page"><ion-content>${'<ion-button class="ios">Row action</ion-button><ion-buttons class="ios"></ion-buttons><ion-menu-button class="ios"></ion-menu-button>'.repeat(
+    100,
+  )}</ion-content></main></ion-app>`;
+  document.querySelectorAll<HTMLElement>('*').forEach((element) => {
+    Object.assign(element.style, { visibility: 'visible', opacity: '1', transform: 'none' });
+  });
+  const styles = vi.spyOn(window, 'getComputedStyle');
+  const geometry = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
+    x: 0,
+    y: 0,
+    left: 0,
+    top: 0,
+    right: 44,
+    bottom: 44,
+    width: 44,
+    height: 44,
+  } as DOMRect);
+  for (const element of document.querySelectorAll<HTMLElement>('ion-button, ion-buttons, ion-menu-button')) {
+    expect(readCandidate(element, () => 'id')).toBeUndefined();
+  }
+  expect(styles.mock.calls.length).toBe(0);
+  expect(geometry.mock.calls.length).toBe(0);
 });
