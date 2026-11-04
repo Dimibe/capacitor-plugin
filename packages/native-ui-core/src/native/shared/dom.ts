@@ -31,6 +31,22 @@ export const prehideOnlyMutation = (record: MutationRecord): boolean => {
   return withoutPrehide(record.oldValue) === withoutPrehide((record.target as Element).getAttribute('class') ?? '');
 };
 
+export const contentPressOnlyMutation = (record: MutationRecord): boolean => {
+  if (record.type !== 'attributes' || record.attributeName !== 'class') return false;
+  const target = record.target as Element;
+  if (!target.matches('ion-item, ion-card') || !target.closest('ion-content') || target.closest(`[${marker}], [data-native-ui]`))
+    return false;
+  if (target.querySelector(`ion-header, ion-footer, ion-back-button, ion-tab-bar, ion-segment, ion-fab, [${marker}], [data-native-ui]`))
+    return false;
+  const withoutPress = (value: string) =>
+    value
+      .split(/\s+/)
+      .filter((name) => name && name !== 'ion-activated')
+      .sort()
+      .join(' ');
+  return withoutPress(record.oldValue ?? '') === withoutPress(target.getAttribute('class') ?? '');
+};
+
 export const withoutPrehide = <T>(element: HTMLElement, read: () => T): T => {
   const changed: HTMLElement[] = [];
   for (let current: HTMLElement | null = element; current; current = current.parentElement) {

@@ -1,3 +1,5 @@
+export const tabWidthMeasuring = 'data-native-tab-width-measuring';
+
 /** Keep the Web fallback at the acknowledged native width, without feeding that
  * width back as the next layout request (which can progressively shrink a bar). */
 export const createTabBarWidths = (doc: Document) => {
@@ -29,12 +31,13 @@ export const createTabBarWidths = (doc: Document) => {
     measure<T>(read: () => T): T {
       // Compare layout with the source CSS. Gesture classes and transforms must
       // not discard the measured resting width during a Web handoff.
-      for (const { style } of entries.values()) if (style.sheet) style.sheet.disabled = true;
-      for (const [bar, entry] of entries) if (!bar.isConnected || entry.key !== key(bar)) remove(bar);
+      const measuring = Array.from(entries.keys()).filter((bar) => !bar.hasAttribute(tabWidthMeasuring));
+      for (const bar of measuring) bar.setAttribute(tabWidthMeasuring, '');
       try {
+        for (const [bar, entry] of entries) if (!bar.isConnected || entry.key !== key(bar)) remove(bar);
         return read();
       } finally {
-        for (const { style } of entries.values()) if (style.sheet) style.sheet.disabled = false;
+        for (const bar of measuring) bar.removeAttribute(tabWidthMeasuring);
       }
     },
     apply(bar: HTMLElement, width: number) {
@@ -55,7 +58,7 @@ export const createTabBarWidths = (doc: Document) => {
       const token = `tab-${++next}`;
       const style = doc.createElement('style');
       bar.setAttribute('data-native-tab-width', token);
-      style.textContent = `[data-native-tab-width="${token}"]{width:${cssWidth}px!important;min-width:${cssWidth}px!important;max-width:${cssWidth}px!important}`;
+      style.textContent = `[data-native-tab-width="${token}"]:not(:where([${tabWidthMeasuring}])){width:${cssWidth}px!important;min-width:${cssWidth}px!important;max-width:${cssWidth}px!important}`;
       doc.head.append(style);
       entries.set(bar, { style, key: sourceKey, width, cssWidth });
     },

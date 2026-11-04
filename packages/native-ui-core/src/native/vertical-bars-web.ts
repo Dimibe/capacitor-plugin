@@ -4,6 +4,7 @@ import { enableSupportIonicOverlays } from '@webview-native-ui/engine/ionic';
 import { getProjectionState } from './shared/covered-source.js';
 import { controlSelected } from './shared/control-options.js';
 import { createCrossfade, fadeMarker } from './shared/crossfade.js';
+import { tabWidthMeasuring } from './shared/tab-bar-width.js';
 import { alignVerticalBarClone, verticalBarFrame } from './shared/vertical-bars-geometry.js';
 import { createVerticalBarsWebSearch, searchProjectionClass } from './vertical-bars-web-search.js';
 import { inVerticalBarsSurface, topModal, movingModal, modalPreparing, modalPresentation } from './shared/modal.js';
@@ -542,6 +543,7 @@ export const createVerticalBarsWebProjection = (
             !isProjectionMutation(record) &&
             record.attributeName !== marker &&
             record.attributeName !== toolbarTextMarker &&
+            record.attributeName !== tabWidthMeasuring &&
             !prehideOnlyMutation(record) &&
             !insideProjection(record.target),
         )) ||
