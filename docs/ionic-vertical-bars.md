@@ -198,11 +198,13 @@ import { Foldable } from '@erkamyaman/capacitor-foldable';
 import { resolveVerticalBarsLayout } from '@rdlabo/capacitor-native-ui/integration';
 import { setVerticalBarsLayout } from '@rdlabo/ionic-theme-ios27';
 
-setVerticalBarsLayout(await resolveVerticalBarsLayout(Foldable));
-await Foldable.addListener('barPlacementChange', async () => setVerticalBarsLayout(await resolveVerticalBarsLayout(Foldable)));
+const applyLayout = async () => setVerticalBarsLayout(await resolveVerticalBarsLayout(Foldable));
+
+await applyLayout();
+await Foldable.addListener('layoutChange', applyLayout);
 ```
 
-Call this from the application's existing initial/device-change handler.
+Call this from the application's existing initial/device-change handler. `layoutChange` requires Foldable 8.5 or later. Edge and inset can stay the same when the display changes, so `barPlacementChange` alone misses folds.
 
 The SDK-free
 resolver returns only `edge`, `inset` and `toolbarTop`; it does not start Native UI,
