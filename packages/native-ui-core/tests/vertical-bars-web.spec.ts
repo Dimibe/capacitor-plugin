@@ -104,6 +104,52 @@ test('explicit standalone text action projects, forwards clicks and restores its
   expect(document.querySelector('.ios-theme-vertical-bars-toolbar-projection')).toBeNull();
 });
 
+test.each(['Save', '<ion-icon name="save"></ion-icon>', '<svg><path d="M0 0"></path></svg>'])(
+  'unchanged action content keeps its node, while source changes still synchronize: %s',
+  async (content) => {
+    document.body.innerHTML = `<ion-app class="ios-theme-vertical-bars"><main class="ion-page">
+      <ion-header><ion-toolbar><ion-button data-vertical-bars="true">${content}</ion-button></ion-toolbar></ion-header>
+      </main></ion-app>`;
+    const source = document.querySelector<HTMLElement>('ion-button')!;
+    source.style.display = 'block';
+    source.style.visibility = 'visible';
+    source.getBoundingClientRect = () => ({ width: 44, height: 44 }) as DOMRect;
+    const prehide = prehideVerticalBarsToolbarSources(document);
+    const handle = createVerticalBarsWebProjection(document, {});
+    try {
+      await nextFrame();
+      const target = projectionState.getTarget(source)!;
+      const initial = target.firstChild;
+      handle.markForCheck();
+      await nextFrame();
+      expect(target.firstChild).toBe(initial);
+
+      const icon = source.querySelector('ion-icon, svg');
+      if (icon?.matches('ion-icon')) icon.setAttribute('name', 'close');
+      else if (icon) icon.querySelector('path')!.setAttribute('d', 'M1 1');
+      else source.textContent = 'Changed';
+      handle.markForCheck();
+      await nextFrame();
+      expect(target.firstChild).not.toBe(initial);
+      if (icon) expect(target.querySelector('ion-icon, svg')!.outerHTML).toBe(icon.outerHTML.replace('>', ' slot="icon-only">'));
+      else expect(target.textContent).toBe('Changed');
+      const changed = target.firstChild;
+      handle.markForCheck();
+      await nextFrame();
+      expect(target.firstChild).toBe(changed);
+
+      source.innerHTML = icon ? 'Text instead' : '<ion-icon name="add"></ion-icon>';
+      handle.markForCheck();
+      await nextFrame();
+      expect(!!target.querySelector('ion-icon')).toBe(!icon);
+      if (icon) expect(target.textContent).toBe('Text instead');
+    } finally {
+      await handle.destroy();
+      prehide.stop();
+    }
+  },
+);
+
 test('a single-action group and its action share the same snapshot projection target', async () => {
   document.body.innerHTML = `<ion-app class="ios-theme-vertical-bars"><main class="ion-page">
     <ion-header><ion-toolbar><ion-buttons><ion-button data-vertical-bars="true">Save</ion-button></ion-buttons></ion-toolbar></ion-header>

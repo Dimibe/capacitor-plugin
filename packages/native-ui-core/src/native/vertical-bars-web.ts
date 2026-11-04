@@ -252,6 +252,7 @@ export const createVerticalBarsWebProjection = (
     target.text = '';
     alignVerticalBarClone(target, original, surface);
   };
+  const actionContents = new WeakMap<HTMLElement, string>();
   const syncAction = (target: HTMLElement, original: HTMLElement) => {
     copyAttributes(target, original);
     target.classList.add('ios-theme-vertical-bars-toolbar-action', 'ion-cloned-element');
@@ -263,9 +264,13 @@ export const createVerticalBarsWebProjection = (
     if ('disabled' in original) (target as HTMLIonButtonElement).disabled = (original as HTMLIonButtonElement).disabled;
     if (original.matches('ion-button')) {
       const icon = original.querySelector<HTMLElement>('ion-icon, svg');
+      const text = original.textContent?.trim() || label || '';
+      const content = icon ? `icon:${icon.outerHTML}` : `text:${text}`;
+      if (actionContents.get(target) === content) return;
       const clonedIcon = icon?.cloneNode(true) as HTMLElement | undefined;
       clonedIcon?.setAttribute('slot', 'icon-only');
-      target.replaceChildren(...(clonedIcon ? [clonedIcon] : [document.createTextNode(original.textContent?.trim() || label || '')]));
+      target.replaceChildren(...(clonedIcon ? [clonedIcon] : [document.createTextNode(text)]));
+      actionContents.set(target, content);
     }
   };
   const sameToolbar = (current: ToolbarProjection, { group, actions }: ToolbarSource) =>
