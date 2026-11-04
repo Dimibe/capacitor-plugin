@@ -191,47 +191,22 @@ See [Read the device layout](https://docs.rdlabo.dev/projects/ionic-theme-ios27/
 
 Safe-area handling, overlays, RTL, control eligibility, Web simulation, and the handle API are documented in [Vertical Bars](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/vertical-bars). Read that reference when you need to customize this setup; it is not an additional installation step.
 
-## Resolve device layout without starting Native UI
-
-`resolveVerticalBarsLayout(provider)` is exported from `@rdlabo/capacitor-native-ui/integration`.
-This SDK-free entry neither registers a native plugin nor starts a projection runtime. The
-provider is a structural interface, not an import of Foldable; the corresponding shared
-implementation can also be exposed through Cordova's `/integration` entry.
+## Resolve device layout
 
 ```ts
 import { Foldable } from '@erkamyaman/capacitor-foldable';
 import { resolveVerticalBarsLayout } from '@rdlabo/capacitor-native-ui/integration';
 import { setVerticalBarsLayout } from '@rdlabo/ionic-theme-ios27';
 
-// In the application's existing initial/device-change layout handler:
 setVerticalBarsLayout(await resolveVerticalBarsLayout(Foldable));
 ```
 
-The resolver reads placement and reserved regions and returns `edge`, `inset`, `toolbarTop`
-only. It does not change CSS, subscribe to device changes, or supply theme
-defaults. Failed or unsupported reads leave values undefined. Keep existing subscriptions,
-cleanup and stale-response protection in the application owner. Any compatible provider can
-be passed; this does not assume the API shape of a future Capacitor release.
+Call this from the application's existing initial/device-change handler. The SDK-free
+resolver returns only `edge`, `inset` and `toolbarTop`; it does not start Native UI,
+subscribe to events or apply CSS. Missing/failed reads remain undefined so
+`setVerticalBarsLayout` retains responsibility for defaults. Applying `toolbarTop`
+requires the corresponding theme input extension.
 
-Theme-free applications can apply the returned plain values to their own layout.
-This change does not add Engine inputs or change native rendering behavior.
-
-Provider insets, region frames (including their margins), and context viewport dimensions
-must use the same viewport CSS-pixel coordinate space. Foldable's UIKit points coincide
-with CSS pixels in the usual device-width, initial-scale=1 viewport. A custom viewport
-or scale must normalize the provider's coordinates first; `context.viewport` does not
-rescale native points. Custom providers can perform that normalization without changing
-the theme or starting Native UI.
-
-For a differently directed root or SSR, optionally override the browser context:
-
-```ts
-const layout = await resolveVerticalBarsLayout(provider, {
-  viewport: { width: 951, height: 669 },
-  rtl: true,
-});
-```
-
-This resolver works with the currently declared Engine dependency; it needs no new
-Engine API. The existing theme's `setVerticalBarsLayout` remains the owner of CSS and
-defaults; applying `toolbarTop` requires its corresponding input extension.
+Provider frames and insets must use the browser viewport's CSS pixels. Foldable's
+points match the usual device-width, initial-scale=1 viewport; other scales require
+a normalized provider. The document direction determines the physical rail side.

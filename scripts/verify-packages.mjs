@@ -118,11 +118,15 @@ try {
     import assert from 'node:assert/strict';
     import { resolveVerticalBarsLayout } from '@rdlabo/capacitor-native-ui/integration';
     assert.equal(typeof resolveVerticalBarsLayout, 'function');
-    const layout = await resolveVerticalBarsLayout({
+    const provider = {
       getBarPlacement: async () => ({verticalBarEdge:'trailing',inset:84}),
       getReservedRegions: async () => ({regions:[{kind:'occlusion',isActive:true,x:382,y:0,width:84,height:174}]}),
-    }, {viewport:{width:466,height:678},rtl:false});
-    assert.equal(layout.toolbarTop, 174);
+    };
+    const layout = await resolveVerticalBarsLayout(provider);
+    assert.equal(layout.toolbarTop, undefined);
+    globalThis.window = {innerWidth:466,innerHeight:678};
+    assert.equal((await resolveVerticalBarsLayout(provider)).toolbarTop, 174);
+    delete globalThis.window;
     assert.deepEqual(Object.keys(layout).sort(), ['edge','inset','toolbarTop']);
     for (const name of ['@capacitor/core','@ionic/core','@rdlabo/ionic-theme-utils'])
       await assert.rejects(import(name), {code:'ERR_MODULE_NOT_FOUND'});

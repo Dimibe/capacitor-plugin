@@ -1,28 +1,19 @@
-import { reservedVerticalBarBoundary, type NativeUIReservedRegion } from './reserved-regions.js';
-
-/** Structural source: inset and region frames must use viewport CSS pixels. No device SDK dependency. */
-export interface VerticalBarsLayoutProvider {
+interface LayoutProvider {
   getBarPlacement?(): Promise<{ verticalBarEdge: 'leading' | 'trailing' | null; inset: number }>;
-  getReservedRegions?(): Promise<{ regions: readonly NativeUIReservedRegion[] }>;
+  getReservedRegions?(): Promise<{
+    regions: readonly {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      kind: 'division' | 'occlusion';
+      isActive: boolean;
+    }[];
+  }>;
 }
 
-export interface ResolvedVerticalBarsLayout {
-  edge?: 'leading' | 'trailing' | null;
-  inset?: number;
-  toolbarTop?: number;
-}
-
-/** Optional context in the same CSS-pixel coordinate space as the provider. */
-export interface VerticalBarsLayoutContext {
-  viewport?: { width: number; height: number };
-  rtl?: boolean;
-}
-
-/** Read one device snapshot. Missing values retain the applying layout's defaults. */
-export const resolveVerticalBarsLayout = async (
-  provider: VerticalBarsLayoutProvider,
-  context: VerticalBarsLayoutContext = {},
-): Promise<ResolvedVerticalBarsLayout> => {
+/** Resolve Web layout values in viewport CSS pixels. Defaults belong to the applying theme. */
+export const resolveVerticalBarsLayout = async (provider: LayoutProvider) => {
   const [placement, reserved] = await Promise.allSettled([
     Promise.resolve().then(() => provider.getBarPlacement?.()),
     Promise.resolve().then(() => provider.getReservedRegions?.()),
@@ -30,16 +21,29 @@ export const resolveVerticalBarsLayout = async (
   const bars = placement.status === 'fulfilled' ? placement.value : undefined;
   const regions = reserved.status === 'fulfilled' ? reserved.value?.regions : undefined;
   const edge = bars?.verticalBarEdge;
-  const metrics: ResolvedVerticalBarsLayout = {
+  let toolbarTop: number | undefined;
+  if (edge && typeof window !== 'undefined' && window.innerWidth > 0 && window.innerHeight > 0) {
+    const rtl = typeof document !== 'undefined' && document.documentElement.dir === 'rtl';
+    const left = (edge === 'leading') !== rtl;
+    for (const { x, y, width, height, kind, isActive } of regions ?? []) {
+      if (
+        kind !== 'occlusion' ||
+        !isActive ||
+        ![x, y, width, height].every(Number.isFinite) ||
+        width <= 0 ||
+        height <= 0 ||
+        y > 0 ||
+        y + height <= 0 ||
+        (left ? x > 0 || x + width <= 0 : x >= window.innerWidth || x + width < window.innerWidth)
+      )
+        continue;
+      const bottom = Math.min(y + height, window.innerHeight);
+      toolbarTop = toolbarTop === undefined ? bottom : Math.max(toolbarTop, bottom);
+    }
+  }
+  return {
     edge,
     inset: Number.isFinite(bars?.inset) && bars!.inset >= 0 ? bars!.inset : undefined,
+    toolbarTop,
   };
-  const viewport =
-    context.viewport ?? (typeof window === 'undefined' ? undefined : { width: window.innerWidth, height: window.innerHeight });
-  if (edge && viewport) {
-    const rtl = context.rtl ?? (typeof document !== 'undefined' && document.documentElement.dir === 'rtl');
-    const physicalEdge = (edge === 'leading') !== rtl ? 'left' : 'right';
-    metrics.toolbarTop = reservedVerticalBarBoundary(regions, physicalEdge, viewport.width, viewport.height);
-  }
-  return metrics;
 };
