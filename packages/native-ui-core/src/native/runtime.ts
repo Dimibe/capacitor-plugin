@@ -116,6 +116,7 @@ export const createRuntime = async (
   const verticalBarsMembers = new Set<HTMLElement>();
   const suspended = new Set<HTMLElement[]>();
   const navigation = createHorizontalNavigation();
+  const unregisterTransitionActive = projectionState.setTransitionActive(() => !!navigation.current);
   const verticalNavigation = createVerticalNavigation();
   let verticalGesture: { pending: boolean; scopes: HTMLElement[]; sources: Set<HTMLElement> } | undefined;
   let acknowledged: Candidate[] = [];
@@ -378,6 +379,15 @@ export const createRuntime = async (
       },
     );
   };
+  // Navigation is an atomic ownership epoch: while it plays, rail sources keep
+  // their bookkeeping so transient candidacy gaps cannot hand them to the Web
+  // fallback mid-transition. Committing performs the single ownership transfer.
+  const holdRail = (element: HTMLElement) =>
+    !!navigation.current &&
+    navigation.current.phase !== 'committing' &&
+    isVerticalBarsSource(element) &&
+    navigation.owns(element) &&
+    element.isConnected;
   const readSources = (): Candidate[] => {
     // Ionic owns the closing animation. Keep the covered page on Web until
     // DidDismiss instead of repeatedly projecting the moving modal controls.
@@ -742,11 +752,11 @@ export const createRuntime = async (
       }
       const committingNavigation = navigation.current?.phase === 'committing';
       const preparingNavigation = navigation.current?.leased && navigation.current.phase === 'playing';
-      const returningToWeb = removed.filter((element) => !committingNavigation || !navigation.owns(element));
+      const returningToWeb = removed.filter((element) => !holdRail(element) && (!committingNavigation || !navigation.owns(element)));
       if (returningToWeb.length) {
         // Restore the source and let WebKit paint before removing its native cover.
         returningToWeb.forEach((element) => restore(element, preparingNavigation));
-        if (removed.some(isVerticalBarsSource))
+        if (removed.some((element) => isVerticalBarsSource(element) && !holdRail(element)))
           win.dispatchEvent(new CustomEvent('nativeUIVerticalBarsRelease', { detail: { instant: handoffInstant } }));
         // The outgoing tab is no longer visible, so waiting two frames only leaves its
         // native snapshot over the destination. Stack transitions still need the paint.
@@ -896,9 +906,9 @@ export const createRuntime = async (
       // Keep an existing cover while its content catches up. Only an ineligible
       // source needs to return to Web; new sources still require an exact ack.
       for (const element of sources.keys())
-        if (!currentSources.has(element)) restore(element, committingNavigation && navigation.owns(element));
+        if (!currentSources.has(element) && !holdRail(element)) restore(element, committingNavigation && navigation.owns(element));
       for (const element of verticalBarsOwners) {
-        if (acceptedVerticalBarsOwners.has(element)) continue;
+        if (acceptedVerticalBarsOwners.has(element) || holdRail(element)) continue;
         element.removeAttribute(verticalBarsMarker);
         verticalBarsOwners.delete(element);
       }
@@ -907,7 +917,7 @@ export const createRuntime = async (
         verticalBarsOwners.add(element);
       }
       for (const element of verticalBarsMembers) {
-        if (acceptedVerticalBarsMembers.has(element)) continue;
+        if (acceptedVerticalBarsMembers.has(element) || holdRail(element)) continue;
         element.removeAttribute(verticalBarsMemberMarker);
         verticalBarsMembers.delete(element);
       }
@@ -1398,6 +1408,7 @@ export const createRuntime = async (
         await projectionSurfaces.destroy();
         restoreAll();
         unregisterNativeOwner();
+        unregisterTransitionActive();
         if (!doc.hidden) await painted();
         try {
           await bounded(plugin.clear({ revision: ++revision }));

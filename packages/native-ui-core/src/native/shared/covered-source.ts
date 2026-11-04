@@ -5,6 +5,7 @@ const states = new WeakMap<Document, NativeUIProjectionState>();
 const createState = () => {
   const managers = new Set<WebProjectionBatch>();
   const nativeOwners = new Set<(source: HTMLElement) => boolean>();
+  let transitionActive: (() => boolean) | undefined;
   const targets = new WeakMap<HTMLElement, HTMLElement>();
   const imageMarker = 'data-native-ui-snapshot';
   const collect = (key: 'owners' | 'visibleOwners' | 'preparedOwners') => [...new Set([...managers].flatMap((manager) => manager[key]))];
@@ -24,6 +25,14 @@ const createState = () => {
       managers.add(manager);
       return () => managers.delete(manager);
     },
+    // The native navigation epoch is owned by the runtime; other layers read it.
+    setTransitionActive(read: () => boolean) {
+      transitionActive = read;
+      return () => {
+        if (transitionActive === read) transitionActive = undefined;
+      };
+    },
+    isTransitionActive: () => transitionActive?.() ?? false,
     get owners(): readonly HTMLElement[] {
       return collect('owners');
     },

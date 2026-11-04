@@ -9,6 +9,7 @@ import type { NativeUIRuntimeHandle, NativeUIRuntimeOptions, NativeUIPlugin, Ver
 import { createRuntime } from './runtime.js';
 import { bounded, boundedListener } from './shared/bridge.js';
 import { createNativeConnection, type NativeUIConnection } from './shared/connection.js';
+import { getProjectionState } from './shared/covered-source.js';
 interface OverlayController {
   suspend(): Promise<() => void>;
   destroy(): Promise<void>;
@@ -154,8 +155,13 @@ const physicalVerticalBarEdge = (edge: Exclude<VerticalBarEdge, null>, rtl: bool
 
 const elementRtl = (element: Element): boolean => element.closest('[dir]')?.getAttribute('dir') === 'rtl';
 
-const webProjection = (doc: Document, options: NativeUIRuntimeOptions, enabled: () => boolean = () => true) => {
-  const ionic = () => createVerticalBarsWebProjection(doc, options, () => options.verticalBars?.enabled !== false && enabled());
+const webProjection = (
+  doc: Document,
+  options: NativeUIRuntimeOptions,
+  enabled: () => boolean = () => true,
+  suppressed: () => boolean = () => false,
+) => {
+  const ionic = () => createVerticalBarsWebProjection(doc, options, () => options.verticalBars?.enabled !== false && enabled(), suppressed);
   if (options.source === 'html') return createHTMLWebProjection(doc, options);
   if (options.source === 'auto') return combine(ionic(), createHTMLWebProjection(doc, options));
   return ionic();
@@ -383,13 +389,20 @@ export const enableNativeUI = (options: NativeUIRuntimeOptions = {}, overlayFact
         );
         runtime = combine(
           native,
-          webProjection(document, options, () => {
-            const modal = topModal(document);
-            return (
-              !(modal && (modalPreparing(modal) || modalPresentation(modal))) &&
-              (!nativeVerticalBars() || native.getStatus().projected === 0)
-            );
-          }),
+          webProjection(
+            document,
+            options,
+            () => {
+              const modal = topModal(document);
+              return (
+                !(modal && (modalPreparing(modal) || modalPresentation(modal))) &&
+                (!nativeVerticalBars() || native.getStatus().projected === 0)
+              );
+            },
+            // The native rail owns the navigation epoch; the Web fallback must
+            // not reacquire ownership until native releases it.
+            () => nativeVerticalBars() && getProjectionState(document).isTransitionActive(),
+          ),
         );
         if (options.ionic?.verticalBars?.popover === true && overlayFactory)
           overlays = await overlayFactory(document, plugin, options, native.retain, nativeVerticalBars, connection);
