@@ -1,6 +1,6 @@
 import { reservedVerticalBarBoundary, type NativeUIReservedRegion } from './reserved-regions.js';
 
-/** Structural source: no dependency on a specific device plugin. */
+/** Structural source: inset and region frames must use viewport CSS pixels. No device SDK dependency. */
 export interface VerticalBarsLayoutProvider {
   getBarPlacement?(): Promise<{ verticalBarEdge: 'leading' | 'trailing' | null; inset: number }>;
   getReservedRegions?(): Promise<{ regions: readonly NativeUIReservedRegion[] }>;
@@ -10,10 +10,9 @@ export interface ResolvedVerticalBarsLayout {
   edge?: 'leading' | 'trailing' | null;
   inset?: number;
   toolbarTop?: number;
-  reservedRegions?: readonly NativeUIReservedRegion[];
 }
 
-/** Optional browser-independent context for SSR or a differently directed root. */
+/** Optional context in the same CSS-pixel coordinate space as the provider. */
 export interface VerticalBarsLayoutContext {
   viewport?: { width: number; height: number };
   rtl?: boolean;
@@ -34,7 +33,6 @@ export const resolveVerticalBarsLayout = async (
   const metrics: ResolvedVerticalBarsLayout = {
     edge,
     inset: Number.isFinite(bars?.inset) && bars!.inset >= 0 ? bars!.inset : undefined,
-    reservedRegions: regions?.map((region) => ({ ...region })),
   };
   const viewport =
     context.viewport ?? (typeof window === 'undefined' ? undefined : { width: window.innerWidth, height: window.innerHeight });

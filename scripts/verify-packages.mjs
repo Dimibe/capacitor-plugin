@@ -123,6 +123,7 @@ try {
       getReservedRegions: async () => ({regions:[{kind:'occlusion',isActive:true,x:382,y:0,width:84,height:174}]}),
     }, {viewport:{width:466,height:678},rtl:false});
     assert.equal(layout.toolbarTop, 174);
+    assert.deepEqual(Object.keys(layout).sort(), ['edge','inset','toolbarTop']);
     for (const name of ['@capacitor/core','@ionic/core','@rdlabo/ionic-theme-utils'])
       await assert.rejects(import(name), {code:'ERR_MODULE_NOT_FOUND'});
   `], {cwd:dir,stdio:'inherit'});
@@ -169,6 +170,12 @@ try {
     consumer,
     `
     import { enableNativeUI } from '@rdlabo/capacitor-native-ui/core';
+    import { resolveVerticalBarsLayout } from '@rdlabo/capacitor-native-ui/integration';
+    async function layoutContract() {
+      const layout: {edge?: 'leading' | 'trailing' | null; inset?: number; toolbarTop?: number} =
+        await resolveVerticalBarsLayout({getBarPlacement:async()=>({verticalBarEdge:'trailing',inset:84})});
+      return layout;
+    }
     import { createWebProjection, createWebProjectionScope, type WebProjectionTransport } from '@webview-native-ui/engine';
     import { enableSupportIonicOverlays } from '@webview-native-ui/engine/ionic';
     enableSupportIonicOverlays();

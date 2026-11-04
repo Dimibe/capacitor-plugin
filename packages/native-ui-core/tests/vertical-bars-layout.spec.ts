@@ -1,8 +1,8 @@
 import { expect, test, vi, afterEach } from 'vitest';
 import { resolveVerticalBarsLayout } from '../src/native-integration/vertical-bars-layout';
 import { reservedVerticalBarBoundary, type NativeUIReservedRegion } from '../src/native-integration/reserved-regions';
-const region = (height: number): NativeUIReservedRegion => ({
-  kind: 'occlusion',
+const region = (height: number) => ({
+  kind: 'occlusion' as const,
   isActive: true,
   x: 382,
   y: 0,
@@ -26,7 +26,6 @@ test('device metrics combine placement and active regions without supplying Web 
     edge: 'trailing',
     inset: 84,
     toolbarTop: 174,
-    reservedRegions: [region(174)],
   });
   expect(source.getBarPlacement).toHaveBeenCalledTimes(1);
   expect(source.getReservedRegions).toHaveBeenCalledTimes(1);
@@ -35,14 +34,14 @@ test('device metrics combine placement and active regions without supplying Web 
 });
 
 test('missing, rejected and synchronously throwing device APIs leave defaults to the applying layout', async () => {
-  expect(await resolveVerticalBarsLayout({})).toEqual({ edge: undefined, inset: undefined, reservedRegions: undefined });
+  expect(await resolveVerticalBarsLayout({})).toEqual({ edge: undefined, inset: undefined });
   const metrics = await resolveVerticalBarsLayout({
     getBarPlacement: async () => ({ verticalBarEdge: 'trailing', inset: 80 }),
     getReservedRegions: () => {
       throw new Error('Unavailable');
     },
   });
-  expect(metrics).toEqual({ edge: 'trailing', inset: 80, toolbarTop: undefined, reservedRegions: undefined });
+  expect(metrics).toEqual({ edge: 'trailing', inset: 80, toolbarTop: undefined });
   expect(
     await resolveVerticalBarsLayout({
       getBarPlacement: async () => {
@@ -50,7 +49,7 @@ test('missing, rejected and synchronously throwing device APIs leave defaults to
       },
       getReservedRegions: async () => ({ regions: [region(174)] }),
     }),
-  ).toEqual({ edge: undefined, inset: undefined, reservedRegions: [region(174)] });
+  ).toEqual({ edge: undefined, inset: undefined });
 });
 
 test('logical placement resolves the physical occlusion in RTL and respects a horizontal device layout', async () => {
@@ -124,6 +123,43 @@ test('SSR can resolve explicit geometry without browser or native SDK globals', 
   }
 });
 
+test('custom providers can normalize points into the context CSS coordinate space', async () => {
+  const native = {
+    getBarPlacement: async () => ({ verticalBarEdge: 'trailing' as const, inset: 84 }),
+    getReservedRegions: async () => ({ regions: [region(174)] }),
+  };
+  const context = { viewport: { width: 932, height: 1356 }, rtl: false };
+  // Context is a coordinate contract, not an implicit native-point conversion.
+  expect((await resolveVerticalBarsLayout(native, context)).toolbarTop).toBeUndefined();
+  const normalized = {
+    async getBarPlacement() {
+      const placement = await native.getBarPlacement();
+      return { ...placement, inset: placement.inset * 2 };
+    },
+    async getReservedRegions() {
+      const { regions } = await native.getReservedRegions();
+      return {
+        regions: regions.map((r) => ({
+          ...r,
+          x: r.x * 2,
+          y: r.y * 2,
+          width: r.width * 2,
+          height: r.height * 2,
+          margins: r.margins && {
+            top: r.margins.top * 2,
+            right: r.margins.right * 2,
+            bottom: r.margins.bottom * 2,
+            left: r.margins.left * 2,
+          },
+        })),
+      };
+    },
+  };
+  const layout = await resolveVerticalBarsLayout(normalized, context);
+  expect(layout.inset).toBe(168);
+  expect(layout.toolbarTop).toBe(348);
+});
+
 test('the boundary helper ignores margins, unusable inputs and non-rail regions without reading globals', () => {
   const top = (regions?: readonly NativeUIReservedRegion[]) => reservedVerticalBarBoundary(regions, 'right', 466, 678);
   expect(top()).toBeUndefined();
@@ -132,10 +168,13 @@ test('the boundary helper ignores margins, unusable inputs and non-rail regions 
   expect(reservedVerticalBarBoundary([region(174)], 'right', 466, 0)).toBeUndefined();
   expect(top([region(174)])).toBe(174);
   expect(top([region(120)])).toBe(120);
+  expect(top([region(174), region(230)])).toBe(230);
   const irrelevant = [
     { ...region(300), isActive: false },
     { ...region(678), kind: 'division' as const },
     { ...region(78), y: 600 },
+    { ...region(37), y: 29 },
+    { ...region(174), x: 0, width: 84 },
     { ...region(200), height: Number.NaN },
   ];
   expect(top(irrelevant)).toBeUndefined();

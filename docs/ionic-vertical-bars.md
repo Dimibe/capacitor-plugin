@@ -208,14 +208,20 @@ setVerticalBarsLayout(await resolveVerticalBarsLayout(Foldable));
 ```
 
 The resolver reads placement and reserved regions and returns `edge`, `inset`, `toolbarTop`
-and `reservedRegions`. It does not change CSS, subscribe to device changes, or supply theme
+only. It does not change CSS, subscribe to device changes, or supply theme
 defaults. Failed or unsupported reads leave values undefined. Keep existing subscriptions,
 cleanup and stale-response protection in the application owner. Any compatible provider can
 be passed; this does not assume the API shape of a future Capacitor release.
 
-Theme-free applications can apply the returned values to their own layout. Applications using
-Engine controls can pass `reservedRegions` directly to their Engine-backed handle. The
-Capacitor adapter's existing runtime is not migrated to Engine controls by this helper change.
+Theme-free applications can apply the returned plain values to their own layout.
+This change does not add Engine inputs or change native rendering behavior.
+
+Provider insets, region frames (including their margins), and context viewport dimensions
+must use the same viewport CSS-pixel coordinate space. Foldable's UIKit points coincide
+with CSS pixels in the usual device-width, initial-scale=1 viewport. A custom viewport
+or scale must normalize the provider's coordinates first; `context.viewport` does not
+rescale native points. Custom providers can perform that normalization without changing
+the theme or starting Native UI.
 
 For a differently directed root or SSR, optionally override the browser context:
 
@@ -226,6 +232,6 @@ const layout = await resolveVerticalBarsLayout(provider, {
 });
 ```
 
-The boundary geometry ships inside this package's integration entry; no Engine release is
-required for the layout resolver itself. The existing theme's `setVerticalBarsLayout` remains
-the owner of CSS and defaults; applying `toolbarTop` requires its corresponding input extension.
+This resolver works with the currently declared Engine dependency; it needs no new
+Engine API. The existing theme's `setVerticalBarsLayout` remains the owner of CSS and
+defaults; applying `toolbarTop` requires its corresponding input extension.
