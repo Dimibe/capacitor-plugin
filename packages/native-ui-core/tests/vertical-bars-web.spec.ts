@@ -208,6 +208,8 @@ test('a covered back-only rail survives native reacquisition while dragging a sh
     await nextFrame();
     const clone = projectionState.getTarget(source)!;
     expect(clone?.isConnected).toBe(true);
+    expect(clone.inert).toBe(true);
+    expect(clone.hasAttribute('aria-hidden')).toBe(false);
     clone.setAttribute('data-native-ui-snapshot', 'prepared-back');
     clone.setAttribute('data-native-ui-snapshot-visible', '');
     const modal = document.createElement('ion-modal');
@@ -264,6 +266,8 @@ test('changing modal controls retains the covered background image target', asyn
     expect(modal.classList.contains('ios-theme-vertical-bars-toolbar-ready')).toBe(true);
     const outgoing = projectionState.getTarget(close)!;
     expect(outgoing.isConnected).toBe(true);
+    expect(outgoing.inert).toBe(true);
+    expect(outgoing.hasAttribute('aria-hidden')).toBe(false);
     owners.add(close);
     visibleOwners.add(close);
     modal.dispatchEvent(new CustomEvent('ionModalWillDismiss', { bubbles: true }));

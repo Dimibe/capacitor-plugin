@@ -284,6 +284,7 @@ export const createVerticalBarsWebProjection = (
     backs.every((source, index) => source === backProjections[index].source && surfaceOf(source) === backProjections[index].root) &&
     groups.length === toolbarProjections.length &&
     groups.every((group, index) => sameToolbar(toolbarProjections[index], group));
+  // Ionic can retain aria-hidden inherited during hydration; inert alone tracks coverage without that sticky state.
   const syncExisting = () => {
     for (const { source, projection, root: surface } of backProjections) {
       if (!surface.classList.contains(readyClass)) surface.classList.add(readyClass);
@@ -293,7 +294,6 @@ export const createVerticalBarsWebProjection = (
       }
       syncBack(projection, source, surface);
       projection.inert = isCovered(source);
-      if (projection.inert) projection.setAttribute('aria-hidden', 'true');
     }
     const offsets = new Map<HTMLElement, number>();
     for (const { projection, source, actions, root: surface } of toolbarProjections) {
@@ -310,7 +310,6 @@ export const createVerticalBarsWebProjection = (
       projection.style.setProperty('--ios-theme-vertical-bars-toolbar-offset', `${topOffset}px`);
       // Preserve appearance without bypassing the modal's input/focus boundary.
       projection.inert = isCovered(source);
-      if (projection.inert) projection.setAttribute('aria-hidden', 'true');
       if (projection.matches('ion-buttons')) actions.forEach(({ source: action, projection: clone }) => syncAction(clone, action));
       const frames = actions.map(({ source }) => verticalBarFrame(source));
       if (frames.every((frame) => !!frame)) {
