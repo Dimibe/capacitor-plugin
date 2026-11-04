@@ -190,3 +190,26 @@ See [Read the device layout](https://docs.rdlabo.dev/projects/ionic-theme-ios27/
 ## Shared layout rules and API
 
 Safe-area handling, overlays, RTL, control eligibility, Web simulation, and the handle API are documented in [Vertical Bars](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/vertical-bars). Read that reference when you need to customize this setup; it is not an additional installation step.
+
+## Resolve device layout
+
+```ts
+import { Foldable } from '@erkamyaman/capacitor-foldable';
+import { resolveVerticalBarsLayout } from '@rdlabo/capacitor-native-ui/integration';
+import { setVerticalBarsLayout } from '@rdlabo/ionic-theme-ios27';
+
+setVerticalBarsLayout(await resolveVerticalBarsLayout(Foldable));
+await Foldable.addListener('barPlacementChange', async () => setVerticalBarsLayout(await resolveVerticalBarsLayout(Foldable)));
+```
+
+Call this from the application's existing initial/device-change handler.
+
+The SDK-free
+resolver returns only `edge`, `inset` and `toolbarTop`; it does not start Native UI,
+subscribe to events or apply CSS. Missing/failed reads remain undefined so
+`setVerticalBarsLayout` retains responsibility for defaults. Applying `toolbarTop`
+requires the corresponding theme input extension.
+
+Provider frames and insets must use the browser viewport's CSS pixels. Foldable's
+points match the usual device-width, initial-scale=1 viewport; other scales require
+a normalized provider. The nearest `dir` on `ion-app` or its ancestors determines the physical rail side, matching the theme; without `ion-app`, the document direction is used.

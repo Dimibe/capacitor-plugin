@@ -62,3 +62,5 @@ export const suspendNativeUI = async (scopes: HTMLElement[], options?: NativeUIS
 
 /** Shared geometry used by the theme's transition adapter; no theme import in the plugin. */
 export const nativeWebViewMetrics = { radius: 0 };
+
+export { resolveVerticalBarsLayout } from './vertical-bars-layout.js';

@@ -113,6 +113,24 @@ try {
   assert.equal(manifests.get(nativeName).peerDependencies['@rdlabo/ionic-theme-utils'], undefined);
   assert(!manifests.get(nativeName).dependencies['@webview-native-ui/core'], 'Core must ship inside the plugin');
   cpSync(resolve('node_modules/@webview-native-ui/engine'), join(dir, 'node_modules/@webview-native-ui/engine'), { recursive: true });
+  // Layout resolution alone must not load Capacitor, Ionic or theme utilities.
+  execFileSync(process.execPath, ['--input-type=module', '-e', `
+    import assert from 'node:assert/strict';
+    import { resolveVerticalBarsLayout } from '@rdlabo/capacitor-native-ui/integration';
+    assert.equal(typeof resolveVerticalBarsLayout, 'function');
+    const provider = {
+      getBarPlacement: async () => ({verticalBarEdge:'trailing',inset:84}),
+      getReservedRegions: async () => ({regions:[{kind:'occlusion',isActive:true,x:382,y:0,width:84,height:174}]}),
+    };
+    const layout = await resolveVerticalBarsLayout(provider);
+    assert.equal(layout.toolbarTop, undefined);
+    globalThis.window = {innerWidth:466,innerHeight:678};
+    assert.equal((await resolveVerticalBarsLayout(provider)).toolbarTop, 174);
+    delete globalThis.window;
+    assert.deepEqual(Object.keys(layout).sort(), ['edge','inset','toolbarTop']);
+    for (const name of ['@capacitor/core','@ionic/core','@rdlabo/ionic-theme-utils'])
+      await assert.rejects(import(name), {code:'ERR_MODULE_NOT_FOUND'});
+  `], {cwd:dir,stdio:'inherit'});
   symlinkSync(resolve('node_modules/@capacitor'), join(dir, 'node_modules/@capacitor'), 'dir');
   execFileSync(
     process.execPath,
@@ -156,6 +174,12 @@ try {
     consumer,
     `
     import { enableNativeUI } from '@rdlabo/capacitor-native-ui/core';
+    import { resolveVerticalBarsLayout } from '@rdlabo/capacitor-native-ui/integration';
+    async function layoutContract() {
+      const layout: {edge?: 'leading' | 'trailing' | null; inset?: number; toolbarTop?: number} =
+        await resolveVerticalBarsLayout({getBarPlacement:async()=>({verticalBarEdge:'trailing',inset:84})});
+      return layout;
+    }
     import { createWebProjection, createWebProjectionScope, type WebProjectionTransport } from '@webview-native-ui/engine';
     import { enableSupportIonicOverlays } from '@webview-native-ui/engine/ionic';
     enableSupportIonicOverlays();
