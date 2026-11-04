@@ -198,7 +198,11 @@ import { Foldable } from '@erkamyaman/capacitor-foldable';
 import { resolveVerticalBarsLayout } from '@rdlabo/capacitor-native-ui/integration';
 import { setVerticalBarsLayout } from '@rdlabo/ionic-theme-ios27';
 
-setVerticalBarsLayout(await resolveVerticalBarsLayout(Foldable));
+const applyLayout = async () =>
+  setVerticalBarsLayout(await resolveVerticalBarsLayout(Foldable));
+
+await applyLayout();
+await Foldable.addListener('barPlacementChange', applyLayout);
 ```
 
 Call this from the application's existing initial/device-change handler. A single
