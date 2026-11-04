@@ -201,7 +201,12 @@ import { setVerticalBarsLayout } from '@rdlabo/ionic-theme-ios27';
 setVerticalBarsLayout(await resolveVerticalBarsLayout(Foldable));
 ```
 
-Call this from the application's existing initial/device-change handler. The SDK-free
+Call this from the application's existing initial/device-change handler. A single
+`barPlacementChange` listener covers re-resolution: it fires whenever the values this
+resolver reads can change, including opening, closing and rotating a foldable, so no
+additional device subscriptions are needed.
+
+The SDK-free
 resolver returns only `edge`, `inset` and `toolbarTop`; it does not start Native UI,
 subscribe to events or apply CSS. Missing/failed reads remain undefined so
 `setVerticalBarsLayout` retains responsibility for defaults. Applying `toolbarTop`
