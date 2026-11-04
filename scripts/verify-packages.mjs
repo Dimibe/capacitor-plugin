@@ -113,6 +113,19 @@ try {
   assert.equal(manifests.get(nativeName).peerDependencies['@rdlabo/ionic-theme-utils'], undefined);
   assert(!manifests.get(nativeName).dependencies['@webview-native-ui/core'], 'Core must ship inside the plugin');
   cpSync(resolve('node_modules/@webview-native-ui/engine'), join(dir, 'node_modules/@webview-native-ui/engine'), { recursive: true });
+  // Layout resolution alone must not load Capacitor, Ionic or theme utilities.
+  execFileSync(process.execPath, ['--input-type=module', '-e', `
+    import assert from 'node:assert/strict';
+    import { resolveVerticalBarsLayout } from '@rdlabo/capacitor-native-ui/integration';
+    assert.equal(typeof resolveVerticalBarsLayout, 'function');
+    const layout = await resolveVerticalBarsLayout({
+      getBarPlacement: async () => ({verticalBarEdge:'trailing',inset:84}),
+      getReservedRegions: async () => ({regions:[{kind:'occlusion',isActive:true,x:382,y:0,width:84,height:174}]}),
+    }, {viewport:{width:466,height:678},rtl:false});
+    assert.equal(layout.toolbarTop, 174);
+    for (const name of ['@capacitor/core','@ionic/core','@rdlabo/ionic-theme-utils'])
+      await assert.rejects(import(name), {code:'ERR_MODULE_NOT_FOUND'});
+  `], {cwd:dir,stdio:'inherit'});
   symlinkSync(resolve('node_modules/@capacitor'), join(dir, 'node_modules/@capacitor'), 'dir');
   execFileSync(
     process.execPath,

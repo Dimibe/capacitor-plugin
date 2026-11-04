@@ -190,3 +190,43 @@ See [Read the device layout](https://docs.rdlabo.dev/projects/ionic-theme-ios27/
 ## Shared layout rules and API
 
 Safe-area handling, overlays, RTL, control eligibility, Web simulation, and the handle API are documented in [Vertical Bars](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/vertical-bars). Read that reference when you need to customize this setup; it is not an additional installation step.
+
+## Resolve device layout without starting Native UI
+
+`resolveVerticalBarsLayout(provider)` is exported from `@rdlabo/capacitor-native-ui/integration`.
+This SDK-free entry neither registers a native plugin nor starts a projection runtime. The
+provider is a structural interface, not an import of Foldable; the corresponding shared
+implementation can also be exposed through Cordova's `/integration` entry.
+
+```ts
+import { Foldable } from '@erkamyaman/capacitor-foldable';
+import { resolveVerticalBarsLayout } from '@rdlabo/capacitor-native-ui/integration';
+import { setVerticalBarsLayout } from '@rdlabo/ionic-theme-ios27';
+
+// In the application's existing initial/device-change layout handler:
+setVerticalBarsLayout(await resolveVerticalBarsLayout(Foldable));
+```
+
+The resolver reads placement and reserved regions and returns `edge`, `inset`, `toolbarTop`
+and `reservedRegions`. It does not change CSS, subscribe to device changes, or supply theme
+defaults. Failed or unsupported reads leave values undefined. Keep existing subscriptions,
+cleanup and stale-response protection in the application owner. Any compatible provider can
+be passed; this does not assume the API shape of a future Capacitor release.
+
+Theme-free applications can apply the returned values to their own layout. Applications using
+Engine controls can pass `reservedRegions` directly to their Engine-backed handle. The
+Capacitor adapter's existing runtime is not migrated to Engine controls by this helper change.
+
+For a differently directed root or SSR, optionally override the browser context:
+
+```ts
+const layout = await resolveVerticalBarsLayout(provider, {
+  viewport: { width: 951, height: 669 },
+  rtl: true,
+});
+```
+
+The shared geometry export requires Engine 1.1. Release that Engine version and update this
+package's minimum Engine dependency and registry lockfile before publishing this adapter change.
+The existing theme's `setVerticalBarsLayout` remains the owner of CSS and defaults; applying
+`toolbarTop` requires its corresponding input extension.
