@@ -129,7 +129,7 @@ By default, an `ion-button` moves into the rail when it contains an `ion-icon` o
 </ion-header>
 ```
 
-All fills (`default`, `clear`, `solid`, and `outline`) and Ionic colors follow this placement rule. Keep accessible names and the original click or form-submit handlers on the source buttons. `type="submit"` and `.button-submit` do not select a different placement.
+All fills (`default`, `clear`, `solid`, and `outline`) and Ionic colors follow this placement rule. Keep accessible names and the original click or form-submit handlers on the source buttons. `type="submit"` and `.button-submit` do not select a different placement. Combined with `fill="solid"`, they use prominent glass tinted from the resolved button background, matching the theme’s submit emphasis.
 
 The rule applies to individual buttons and buttons inside `ion-buttons`, on ordinary pages and in the topmost full-width modal. Centered modals, menus, and popovers keep their own toolbar layout. Add `.ios-theme-horizontal-only` to a group or individual button to keep it horizontal. Placement is chosen when a routed page enters; changing an existing button's content or icon slot does not move it between the toolbar and rail until the page leaves and re-enters.
 

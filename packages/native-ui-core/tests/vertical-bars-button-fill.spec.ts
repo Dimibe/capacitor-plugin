@@ -227,3 +227,17 @@ test.each([true, false])('native menu action is discovered with grouping %s', (b
     prehide.stop();
   }
 });
+
+test.each(['type', 'class'])('solid submit %s uses its fill tint and resets when cleared', (marker) => {
+  const group = mount(['solid'], true);
+  const button = group.querySelector<HTMLIonButtonElement>('ion-button')!;
+  if (marker === 'type') button.setAttribute('type', 'submit');
+  else button.classList.add('button-submit');
+  const native = button.shadowRoot!.querySelector<HTMLElement>('[part="native"]')!;
+  native.style.color = 'white';
+  native.style.backgroundColor = 'rgb(2, 137, 255)';
+  const read = () => readCandidate(group, (element) => element.id)!.control.items[0];
+  expect(read()).toMatchObject({ buttonStyle: 'prominent', color: 'rgb(2, 137, 255)' });
+  button.fill = 'clear';
+  expect(read().buttonStyle).toBeUndefined();
+});

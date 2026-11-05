@@ -90,12 +90,13 @@ export const appendItem = (
           : 'source'
         : candidate.buttonProjection;
   const systemButton = projection !== 'source' && isVerticalBarsSource(child) && child.matches('ion-button, ion-menu-button');
-  // A prominent glass button tints from its resolved color, so it cannot use the
-  // system projection's template 'currentColor'.
-  const prominent = child.getAttribute('data-native-ui') === 'button-submit';
   // Ionic defaults buttons inside ion-buttons to clear, even when the app defaults to solid.
   const defaultFill = child.closest('ion-buttons') ? 'clear' : candidate.buttonDefaultFill;
   const fill = !sourceFill || sourceFill === 'default' ? defaultFill : sourceFill;
+  // Match the theme's solid submit emphasis, including buttons outside a form.
+  const submit = child.matches('ion-button[type="submit"], ion-button.button-submit') && fill === 'solid';
+  const prominent = submit || child.getAttribute('data-native-ui') === 'button-submit';
+  const buttonStyle = getComputedStyle(native ?? child);
   const buttonFill =
     !systemButton &&
     isVerticalBarsSource(child) &&
@@ -120,7 +121,7 @@ export const appendItem = (
     selected: !!(child as ItemElement).selected,
     fontSize: parseFloat(labelStyle.fontSize),
     fontWeight: parseInt(labelStyle.fontWeight, 10) || 400,
-    color: systemButton && !prominent ? 'currentColor' : getComputedStyle(native ?? child).color,
+    color: submit ? buttonStyle.backgroundColor : systemButton && !prominent ? 'currentColor' : buttonStyle.color,
     iconTemplate: systemButton ? true : undefined,
     buttonFill,
     buttonStyle: prominent ? 'prominent' : undefined,

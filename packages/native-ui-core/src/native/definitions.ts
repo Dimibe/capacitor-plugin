@@ -153,7 +153,7 @@ export interface NativeUIItem extends Frame {
   color: string;
   /** Resolved ion-button fill for vertical projection; clear omits the native glass background. */
   buttonFill?: 'clear' | 'solid' | 'outline';
-  /** Opt-in prominent glass emphasis (data-native-ui="button-submit"). */
+  /** Prominent glass emphasis for solid Ionic submit buttons or data-native-ui="button-submit". */
   buttonStyle?: 'prominent';
   backgroundColor?: string;
   borderColor?: string;
