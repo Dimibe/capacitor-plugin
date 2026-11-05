@@ -119,7 +119,7 @@ The table below describes the ordinary Native UI. Vertical Bars uses the separat
 
 | Ionic component                               | Supported appearance and placement                                                                        | Native rendering                                                      |
 | --------------------------------------------- | --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| `ion-button`                                  | `fill="default"`, or clear inside an ungrouped `ion-buttons`, in a fixed header/footer toolbar            | Glass `UIButton`                                                      |
+| `ion-button`                                  | Fixed toolbar: default, clear in ungrouped `ion-buttons`, or solid: `type="submit"` or `.button-submit`   | Glass `UIButton`, prominent for solid submit actions                  |
 | `ion-buttons`                                 | Fixed toolbar, two or more direct clear `ion-button` / `ion-menu-button` children sharing the theme glass | One `UIGlassEffect` surface with independent native buttons           |
 | `ion-back-button`                             | Standard icon and color in a fixed header/footer toolbar                                                  | Glass `UIButton`, using the resolved Ionic label/icon                 |
 | `ion-menu-button`                             | Fixed toolbar, inside the theme glass `ion-buttons`                                                       | Glass `UIButton`; original Ionic menu toggle                          |
