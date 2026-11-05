@@ -1,5 +1,5 @@
 {
-  "version": "2.1.0",
+  "version": "2.1.1-0",
   "author": "Masahiko Sakakibara <sakakibara@rdlabo.jp>",
   "license": "MIT",
   "repository": {
@@ -101,7 +101,7 @@
   },
   "dependencies": {
     "@rdlabo/ionic-theme-utils": "0.1.5",
-    "@webview-native-ui/engine": "^1.0.0"
+    "@webview-native-ui/engine": "^1.0.2-0"
   },
   "devDependencies": {
     "@capacitor/android": "^8.5.3",
