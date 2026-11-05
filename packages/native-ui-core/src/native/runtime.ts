@@ -380,18 +380,21 @@ export const createRuntime = async (
       },
     );
   };
-  // Navigation is an atomic ownership epoch: while it plays, rail sources keep
-  // their bookkeeping so transient candidacy gaps cannot hand them to the Web
-  // fallback mid-transition. Committing performs the single ownership transfer.
-  const holdRail = (element: HTMLElement) =>
-    !!navigation.current &&
-    navigation.current.phase !== 'committing' &&
-    isVerticalBarsSource(element) &&
-    navigation.owns(element) &&
-    element.isConnected;
+  // Images replace native pixels, not native ownership. Navigation also retains
+  // its sources across transient candidacy gaps until the single commit transfer.
+  const holdSource = (element: HTMLElement) => {
+    if (!element.isConnected) return false;
+    const page = element.closest<HTMLElement>('.ion-page');
+    return (
+      projectionState.owns(element) ||
+      projectionState.isVisible(element) ||
+      (!manualSuspensions.size && !!page && (tabActivationPages.has(page) || (tabSwitchHandoff && pages.has(page)))) ||
+      (!!navigation.current && navigation.current.phase !== 'committing' && isVerticalBarsSource(element) && navigation.owns(element))
+    );
+  };
   const readSources = (): Candidate[] => {
-    // Ionic owns the closing animation. Keep the covered page on Web until
-    // DidDismiss instead of repeatedly projecting the moving modal controls.
+    // Ionic owns closing motion; the native image keeps ownership until DidDismiss
+    // instead of repeatedly projecting the moving modal controls.
     const modal = topModal(doc);
     if (modal && modalDismissing(modal)) return [];
     if (verticalGesture && (overlayOpen(true, true) || !verticalGesture.scopes.every(inVerticalBarsSurface))) verticalGesture = undefined;
@@ -642,7 +645,7 @@ export const createRuntime = async (
             candidate.actions.delete(configuration.closeId);
           }
           const retainedSources = new Set(retained.flatMap(candidateSources));
-          for (const element of sources.keys()) if (!retainedSources.has(element)) restore(element, true);
+          for (const element of sources.keys()) if (!retainedSources.has(element) && !holdSource(element)) restore(element, true);
           const retirement: NativeUISnapshot = {
             ...renderedSnapshot,
             revision: ++revision,
@@ -752,11 +755,11 @@ export const createRuntime = async (
       }
       const committingNavigation = navigation.current?.phase === 'committing';
       const preparingNavigation = navigation.current?.leased && navigation.current.phase === 'playing';
-      const returningToWeb = removed.filter((element) => !holdRail(element) && (!committingNavigation || !navigation.owns(element)));
+      const returningToWeb = removed.filter((element) => !holdSource(element) && (!committingNavigation || !navigation.owns(element)));
       if (returningToWeb.length) {
         // Restore the source and let WebKit paint before removing its native cover.
         returningToWeb.forEach((element) => restore(element, preparingNavigation));
-        if (removed.some((element) => isVerticalBarsSource(element) && !holdRail(element)))
+        if (removed.some((element) => isVerticalBarsSource(element) && !holdSource(element)))
           win.dispatchEvent(new CustomEvent('nativeUIVerticalBarsRelease', { detail: { instant: handoffInstant } }));
         // The outgoing tab is no longer visible, so waiting two frames only leaves its
         // native snapshot over the destination. Stack transitions still need the paint.
@@ -906,9 +909,9 @@ export const createRuntime = async (
       // Keep an existing cover while its content catches up. Only an ineligible
       // source needs to return to Web; new sources still require an exact ack.
       for (const element of sources.keys())
-        if (!currentSources.has(element) && !holdRail(element)) restore(element, committingNavigation && navigation.owns(element));
+        if (!currentSources.has(element) && !holdSource(element)) restore(element, committingNavigation && navigation.owns(element));
       for (const element of verticalBarsOwners) {
-        if (acceptedVerticalBarsOwners.has(element) || holdRail(element)) continue;
+        if (acceptedVerticalBarsOwners.has(element) || holdSource(element)) continue;
         element.removeAttribute(verticalBarsMarker);
         verticalBarsOwners.delete(element);
       }
@@ -917,7 +920,7 @@ export const createRuntime = async (
         verticalBarsOwners.add(element);
       }
       for (const element of verticalBarsMembers) {
-        if (acceptedVerticalBarsMembers.has(element) || holdRail(element)) continue;
+        if (acceptedVerticalBarsMembers.has(element) || holdSource(element)) continue;
         element.removeAttribute(verticalBarsMemberMarker);
         verticalBarsMembers.delete(element);
       }

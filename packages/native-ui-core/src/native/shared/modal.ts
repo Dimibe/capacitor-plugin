@@ -97,17 +97,6 @@ export const observeVerticalBarsModals = (doc: Document, animate: () => boolean 
     const top = state.stack[state.stack.length - 1];
     let changed = state.top !== top;
     state.top = top;
-    if (top && modalPreparing(top)) {
-      const content = top.shadowRoot?.querySelector<HTMLElement>('[part~="content"]');
-      if (content?.getAnimations().some((animation) => animation.playState === 'running')) {
-        const presentation = readModalAnimation(content);
-        if (presentation) {
-          prepareSheetLayout(top);
-          presentations.set(top, presentation);
-        } else presentations.delete(top); // Unsupported custom animations retain the existing projection path.
-        changed = true;
-      }
-    }
     const nextBounds = top && !modalPreparing(top) ? JSON.stringify(modalVerticalBarFrame(top)) : '';
     const moved = bounds !== '' && nextBounds !== '' && bounds !== nextBounds;
     changed ||= bounds !== nextBounds;
@@ -151,6 +140,17 @@ export const observeVerticalBarsModals = (doc: Document, animate: () => boolean 
       } else modal.style.removeProperty(toolbarTop);
       if (modal.classList.contains(modalRailClass) !== enabled) {
         modal.classList.toggle(modalRailClass, enabled);
+        changed = true;
+      }
+    }
+    if (top && modalPreparing(top)) {
+      const content = top.shadowRoot?.querySelector<HTMLElement>('[part~="content"]');
+      if (content?.getAnimations().some((animation) => animation.playState === 'running')) {
+        const presentation = readModalAnimation(content, top.classList.contains(modalRailClass));
+        if (presentation) {
+          prepareSheetLayout(top);
+          presentations.set(top, presentation);
+        } else presentations.delete(top); // Unsupported custom animations retain the existing projection path.
         changed = true;
       }
     }

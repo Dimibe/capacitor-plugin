@@ -151,7 +151,7 @@ test.each(['Save', '<ion-icon name="save"></ion-icon>', '<svg><path d="M0 0"></p
   },
 );
 
-test('a single-action group and its action share the same snapshot projection target', async () => {
+test('a shared action target stays concealed until native/image ownership returns to Web', async () => {
   document.body.innerHTML = `<ion-app class="ios-theme-vertical-bars"><main class="ion-page">
     <ion-header><ion-toolbar><ion-buttons><ion-button data-vertical-bars="true">Save</ion-button></ion-buttons></ion-toolbar></ion-header>
     </main></ion-app>`;
@@ -165,7 +165,8 @@ test('a single-action group and its action share the same snapshot projection ta
   source.setAttribute('data-native-ui-projected', '');
   preparedOwners.add(source);
   const prehide = prehideVerticalBarsToolbarSources(document);
-  const handle = createVerticalBarsWebProjection(document, {}, () => false);
+  let webEnabled = false;
+  const handle = createVerticalBarsWebProjection(document, {}, () => webEnabled);
   try {
     await nextFrame();
     const clone = document.querySelector<HTMLElement>('.ios-theme-vertical-bars-toolbar-projection');
@@ -182,14 +183,29 @@ test('a single-action group and its action share the same snapshot projection ta
     expect(projectionState.getTarget(source)).toBe(clone);
     expect(clone!.hasAttribute('data-native-ui-snapshot-content')).toBe(true);
     expect(clone!.hasAttribute('data-native-ui-snapshot-positioned')).toBe(true);
-    // A missing image can return the same target to ordinary Web presentation.
+    // Keep the Web visual concealed while image ownership awaits the cover acknowledgement.
     preparedOwners.delete(source);
     owners.add(source);
     owners.add(group);
     window.dispatchEvent(new Event(sourcesChangedEvent));
     await nextFrame();
+    expect(clone?.hasAttribute('data-native-ui-proxy-prepared')).toBe(true);
+    owners.delete(source);
+    owners.delete(group);
+    webEnabled = true;
+    window.dispatchEvent(new Event(sourcesChangedEvent));
+    await nextFrame();
     expect(clone?.hasAttribute('data-native-ui-proxy-prepared')).toBe(false);
     expect(clone?.style.visibility).toBe('visible');
+    // A grouped native owner also conceals the action without a prepared image.
+    nativeOwners.add(group);
+    window.dispatchEvent(new Event(sourcesChangedEvent));
+    await nextFrame();
+    expect(clone?.hasAttribute('data-native-ui-proxy-prepared')).toBe(true);
+    nativeOwners.delete(group);
+    window.dispatchEvent(new Event(sourcesChangedEvent));
+    await nextFrame();
+    expect(clone?.hasAttribute('data-native-ui-proxy-prepared')).toBe(false);
   } finally {
     preparedOwners.delete(source);
     owners.delete(source);
@@ -230,7 +246,7 @@ test('a covered back-only rail survives native reacquisition while dragging a sh
   }
 });
 
-test('changing modal controls retains the covered background image target', async () => {
+test.each([false, true])('modal image targets survive dismissal before/after cover acknowledgement: visible=%s', async (visible) => {
   mountEligibleBackButton();
   const app = document.querySelector('ion-app')!;
   const source = document.querySelector<HTMLElement>('ion-back-button')!;
@@ -269,8 +285,9 @@ test('changing modal controls retains the covered background image target', asyn
     expect(outgoing.isConnected).toBe(true);
     expect(outgoing.inert).toBe(true);
     expect(outgoing.hasAttribute('aria-hidden')).toBe(false);
+    preparedOwners.delete(close);
     owners.add(close);
-    visibleOwners.add(close);
+    if (visible) visibleOwners.add(close);
     modal.dispatchEvent(new CustomEvent('ionModalWillDismiss', { bubbles: true }));
     close.closest('.ion-page')!.dispatchEvent(new CustomEvent('ionViewWillLeave', { bubbles: true }));
     await nextFrame();

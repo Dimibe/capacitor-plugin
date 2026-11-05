@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from 'vitest';
-import { prepareSheetLayout } from '../src/native/shared/modal-animation';
+import { prepareSheetLayout, readModalAnimation } from '../src/native/shared/modal-animation';
 import { releaseSheetBackdropGesture } from '../src/native/shared/modal';
 
 afterEach(() => {
@@ -142,4 +142,45 @@ test('sheet layout preparation leaves custom effects, dormant gestures and other
   regular.modal.classList.remove('modal-no-expand-scroll');
   prepareSheetLayout(regular.modal);
   expect(regular.effect.setKeyframes).not.toHaveBeenCalled();
+});
+
+test('a floating rail modal uses the same entry animation; a centered dialog stays Web', () => {
+  const content = document.createElement('div');
+  Object.defineProperties(content, {
+    offsetWidth: { value: window.innerWidth - 16 },
+    offsetLeft: { value: 8 },
+    offsetHeight: { value: 400 },
+  });
+  content.getBoundingClientRect = () => DOMRect.fromRect({ x: 8, y: 8, width: window.innerWidth - 16, height: 400 });
+  content.getAnimations = () =>
+    [
+      {
+        playState: 'running',
+        playbackRate: 1,
+        currentTime: 10,
+        effect: {
+          getKeyframes: () => [
+            { transform: 'translateY(100%)', opacity: 1, easing: 'linear' },
+            { transform: 'translateY(0%)', opacity: 1, easing: 'linear' },
+          ],
+          getTiming: () => ({ duration: 500, easing: 'linear', iterations: 1, direction: 'normal', delay: 0 }),
+        },
+      },
+    ] as unknown as Animation[];
+  vi.stubGlobal(
+    'DOMMatrixReadOnly',
+    class {
+      a = 1;
+      d = 1;
+      b = 0;
+      c = 0;
+      m41 = 0;
+      m42 = 0;
+    },
+  );
+  expect(readModalAnimation(content)).toBeUndefined();
+  expect(readModalAnimation(content, true)).toMatchObject({
+    frame: { x: 0, y: 8, width: window.innerWidth, height: 400 },
+    animation: { fromY: 400, duration: 500 },
+  });
 });

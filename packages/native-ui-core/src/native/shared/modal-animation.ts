@@ -11,9 +11,9 @@ export interface ModalAnimation {
 }
 
 let sequence = 0;
-export const readModalAnimation = (content: HTMLElement): { animation: ModalAnimation; frame: Frame } | undefined => {
+export const readModalAnimation = (content: HTMLElement, rail = false): { animation: ModalAnimation; frame: Frame } | undefined => {
   const win = content.ownerDocument.defaultView!;
-  if (Math.abs(content.offsetWidth - win.innerWidth) > 1 || Math.abs(content.offsetLeft) > 1) return;
+  if (!rail && (Math.abs(content.offsetWidth - win.innerWidth) > 1 || Math.abs(content.offsetLeft) > 1)) return;
   const animation = content
     .getAnimations()
     .find((item) => item.playState === 'running' && (item.effect as KeyframeEffect)?.getKeyframes().some((frame) => frame['transform']));

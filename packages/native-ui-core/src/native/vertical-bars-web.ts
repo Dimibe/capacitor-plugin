@@ -150,7 +150,7 @@ export const createVerticalBarsWebProjection = (
     (inVerticalBarsSurface(element) || isCovered(element)) &&
     verticalBarsActionCandidate(element) &&
     !isExcluded(element, verticalBarsEnteringPage(element)) &&
-    (!verticalBarsPages.isDeparted(element) || projectionState.isVisible(element));
+    (!verticalBarsPages.isDeparted(element) || projectionState.owns(element) || projectionState.isVisible(element));
   const isEligibleBack = (element: HTMLIonBackButtonElement) =>
     !!verticalBarsRoot()?.contains(element) &&
     (!options.root || options.root.contains(element)) &&
@@ -158,7 +158,7 @@ export const createVerticalBarsWebProjection = (
     verticalBarsOwned(element) &&
     verticalBarsBackCandidate(element) &&
     !isExcluded(element, verticalBarsEnteringPage(element)) &&
-    (!verticalBarsPages.isDeparted(element) || projectionState.isVisible(element)) &&
+    (!verticalBarsPages.isDeparted(element) || projectionState.owns(element) || projectionState.isVisible(element)) &&
     unprojected(projectedSources(), () => isRendered(element));
   const pageOrder = (element: Element) => Array.from(doc.querySelectorAll('.ion-page')).indexOf(element.closest('.ion-page')!);
   const findBack = (surface = topModal(doc) ?? verticalBarsRoot()) => {
@@ -241,7 +241,15 @@ export const createVerticalBarsWebProjection = (
         target.setAttribute(attribute.name, attribute.value);
     target.classList.remove(prehiddenClass);
     // Establish ownership before insertion/layout: glass can sample even a single Web paint.
-    target.toggleAttribute('data-native-ui-proxy-prepared', isPrepared(original));
+    const group = original.closest<HTMLElement>('ion-buttons');
+    target.toggleAttribute(
+      'data-native-ui-proxy-prepared',
+      isPrepared(original) ||
+        nativeOwned(original) ||
+        !!(group && nativeOwned(group)) ||
+        projectionState.owns(original) ||
+        projectionState.isVisible(original),
+    );
   };
   const syncBack = (target: HTMLIonBackButtonElement, original: HTMLIonBackButtonElement, surface: HTMLElement) => {
     copyAttributes(target, original);
