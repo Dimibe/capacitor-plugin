@@ -13,6 +13,6 @@ Pod::Spec.new do |s|
   s.source_files = 'ios/Sources/**/*.{swift,h,m,c,cc,mm,cpp}', 'packages/native-ui-core/ios/Sources/**/*.swift'
   s.ios.deployment_target = '15.0'
   s.dependency 'Capacitor'
-  s.dependency 'WebViewNativeUIEngine', '1.0.2-0'
+  s.dependency 'WebViewNativeUIEngine', '1.0.2'
   s.swift_version = '5.9'
 end

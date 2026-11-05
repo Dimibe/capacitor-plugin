@@ -4,6 +4,67 @@ title: Migration
 
 # Migration
 
+## Upgrading from 2.1.0
+
+This section covers the same upgrade in both the theme and Native UI guides; following either one is sufficient. Keep existing theme imports, stylesheets and animation setup. Native UI remains optional. If enabled, keep your existing `enableNativeUI()` call, control selection and application-root runtime. The older package-separation migration below does not need to be repeated.
+
+### Update dependencies
+
+For theme-only applications, update the theme:
+
+```sh
+npm install @rdlabo/ionic-theme-ios27@latest
+```
+
+For applications using device rail geometry or Native UI, update all three packages, including Foldable. They are versioned independently; use compatible versions according to the theme's peer dependency:
+
+```sh
+npm install @rdlabo/ionic-theme-ios27@latest @rdlabo/capacitor-native-ui@latest @erkamyaman/capacitor-foldable@latest
+```
+
+The resolver import below supplies layout values without enabling native projection. Theme-only applications without a device rail can skip the device geometry step.
+
+### Update device geometry
+
+If your app maps `getBarPlacement()` directly into `setVerticalBarsLayout({ edge, inset })`, use the resolver to include the toolbar origin from reserved regions:
+
+```diff
+- import { Foldable, type BarPlacement } from '@erkamyaman/capacitor-foldable';
++ import { Foldable } from '@erkamyaman/capacitor-foldable';
++ import { resolveVerticalBarsLayout } from '@rdlabo/capacitor-native-ui/integration';
+ import { setVerticalBarsLayout } from '@rdlabo/ionic-theme-ios27';
+
+- const applyPlacement = ({ verticalBarEdge, inset }: BarPlacement) =>
+-   setVerticalBarsLayout({ edge: verticalBarEdge, inset });
+- const listener = await Foldable.addListener('barPlacementChange', applyPlacement);
+- applyPlacement(await Foldable.getBarPlacement());
++ const updateLayout = async () => {
++   setVerticalBarsLayout(await resolveVerticalBarsLayout(Foldable));
++ };
++ const listener = await Foldable.addListener('layoutChange', () => void updateLayout());
++ await updateLayout();
+```
+
+Replace the old placement listener rather than adding a second update path. Keep `await listener.remove()` in the existing application teardown. If you already have a `layoutChange` handler, put the resolver call there. Keep existing `foldStateChange` / `applyFoldStateClasses` wiring for posture; the resolver only supplies rail geometry.
+
+Use the reported rail layout directly, without gating it on `isDeviceFoldable()`, a device name or viewport-size heuristics. Remove fixed toolbar-top workarounds used to imitate device geometry. Intentional application CSS overrides remain supported. Defaults stay in the theme's `setVerticalBarsLayout`, not the resolver. The theme's outer-display default is 174px; reported device geometry can supply the inner-display origin, 124px. See [layout values and fallback behavior](https://docs.rdlabo.dev/projects/ionic-theme-ios27/docs/vertical-bars-layout#apply-device-layout-values).
+
+### Modal fixes and submit appearance
+
+Floating cards and sheets now use measured bounds to avoid overlapping the Duo rail, and Native UI correctly recognizes floating dialogs that overlap the rail. This fixes the modal layout and native-control handling; no application code change is required. If you added forced-full-width CSS specifically to work around this bug, you can remove that workaround. Keep explicit full-screen sizing when it is a product requirement. With `ios-theme-vertical-bars` or `ios-theme-fold-expanded` on `ion-app`, floating cards and sheets leave at least 8px at each side. Viewports at least 600px high cap their width at 653px; shorter viewports use the available width minus 16px. Top clearance follows the safe area, with an 8px minimum. Sheet breakpoints still control visible height. Application sizing via `--width`, `--max-width` and `--height` remains supported. Ordinary phone and tablet defaults are unchanged when neither layout class is active.
+
+Solid Ionic submit buttons use prominent native glass automatically:
+
+```html
+<ion-button type="submit" fill="solid">Save</ion-button>
+```
+
+The same appearance applies to existing `.button-submit` actions with solid fill. That class supplies styling, not form submission. Clear and outline fills do not gain submit emphasis. Existing explicit `data-native-ui="button-submit"` declarations remain supported.
+
+Native controls keep ownership during navigation, modal animations and image handoffs. An image shown in the WebView is still the native projection's presentation, not a return to the original Web button. Retest and remove transition-specific workarounds that force those controls back to Web. Keep intentional opt-outs and handling for unsupported controls or native failures; no additional animation flags or second runtime are needed.
+
+Check both rail edges, rail disappearance, fold/rotation, card/sheet/full-screen presentation, and solid submit actions. Also check ordinary iPhone and browser fallback. For Cordova, use the [bundled integration](https://github.com/webview-native-ui/cordova-plugin); its pinned theme and native changes arrive through a Cordova plugin release rather than these Capacitor installation commands.
+
 ## Upgrading from 1.2.1
 
 This guide is for applications using `@rdlabo/ionic-theme-ios27` **1.2.1**, including its Native UI Shell Preview and standalone Vertical Control Area.
