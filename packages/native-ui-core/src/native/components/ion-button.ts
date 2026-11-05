@@ -1,6 +1,6 @@
 import { horizontalSelected, horizontalToolbarGroup, inVerticalToolbarLayout } from '../shared/toolbar-options.js';
 import type { VerticalControlAreaOptions } from '../definitions.js';
-import { createCandidate, appendItem } from '../shared/candidate.js';
+import { createCandidate, appendItem, isSolidSubmit } from '../shared/candidate.js';
 import type { Candidate, Identify } from '../shared/candidate.js';
 import { inFixedToolbar, isVerticalBarsToolbarAction, isVerticalBarsToolbarGroup } from '../shared/dom.js';
 
@@ -16,7 +16,7 @@ export const read = (element: HTMLElement, id: Identify, options: VerticalContro
   if (
     !inFixedToolbar(element) ||
     (verticalBars && !isVerticalBarsToolbarAction(element)) ||
-    (!verticalBars && fill !== 'default' && !(group && fill === 'clear')) ||
+    (!verticalBars && fill !== 'default' && !(group && fill === 'clear') && !isSolidSubmit(button, fill)) ||
     (!verticalBars && button.classList.contains('ion-color'))
   )
     return;
