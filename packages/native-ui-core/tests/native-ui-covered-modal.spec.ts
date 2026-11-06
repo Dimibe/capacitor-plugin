@@ -1,4 +1,4 @@
-import { observeVerticalBarsModals, movingModal, modalMotionEvent } from '../src/native/shared/modal';
+import { observeVerticalBarsModals, movingModal, followingModal, modalRequestedPixels, modalMotionEvent } from '../src/native/shared/modal';
 import { afterEach, expect, test, vi } from 'vitest';
 import { coverOverlayBackground, usesCoveredBackground } from '../src/native/overlays/covered-overlay';
 import type { CoveredSnapshots } from '../src/native/shared/covered-snapshot';
@@ -57,6 +57,8 @@ test.each(['sheet', 'card'])('%s motion spans dragging and settling, without tre
   const stop = observeVerticalBarsModals(document);
   try {
     modal.dispatchEvent(new CustomEvent('ionModalDidPresent', { bubbles: true }));
+    expect(modalRequestedPixels(modal)).toBe('native');
+    events.length = 0; // Initial surface selection is separate from the gesture's motion events.
     modal.dispatchEvent(new Event('pointerdown', { bubbles: true }));
     modal.dispatchEvent(new TouchEvent('touchstart', { bubbles: true }));
     await vi.advanceTimersByTimeAsync(20);
@@ -87,6 +89,91 @@ test.each(['sheet', 'card'])('%s motion spans dragging and settling, without tre
     stop();
     window.removeEventListener(modalMotionEvent, listener);
     vi.useRealTimers();
+  }
+});
+
+test.each([
+  [136, false],
+  [220, false],
+  [136, true],
+  [220, true],
+] as const)('rail follows only below its boundary, including reversal from %s while dismissing=%s', async (initial, dismissing) => {
+  vi.useFakeTimers();
+  document.body.innerHTML =
+    '<ion-app class="ios-theme-vertical-bars" style="--ios-theme-vertical-bars-toolbar-top:174px"><ion-modal><ion-button class="ios-theme-vertical-bars-toolbar-projection"></ion-button></ion-modal></ion-app>';
+  const modal = document.querySelector('ion-modal')!;
+  const target = modal.querySelector('ion-button')!;
+  const wrapper = document.createElement('div');
+  wrapper.setAttribute('part', 'content');
+  Object.defineProperty(wrapper, 'offsetWidth', { value: innerWidth });
+  wrapper.getAnimations = () => [];
+  let y = initial;
+  let railY = initial > 150 ? 244 : 174;
+  wrapper.getBoundingClientRect = () => DOMRect.fromRect({ y, width: innerWidth, height: innerHeight });
+  target.getBoundingClientRect = () => DOMRect.fromRect({ y: railY, width: 48, height: 48 });
+  modal.attachShadow({ mode: 'open' }).append(wrapper);
+  const stop = observeVerticalBarsModals(document);
+  try {
+    modal.dispatchEvent(new CustomEvent('ionModalDidPresent', { bubbles: true }));
+    if (dismissing) modal.dispatchEvent(new CustomEvent('ionModalWillDismiss', { bubbles: true }));
+    modal.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    await vi.advanceTimersByTimeAsync(20);
+    expect(followingModal(document)).toBeUndefined(); // A stationary touch is not motion.
+    expect(modalRequestedPixels(modal)).toBe(dismissing ? 'image' : 'native');
+    y -= 10;
+    railY = initial > 150 ? 234 : 174;
+    await vi.advanceTimersByTimeAsync(20);
+    expect(movingModal(document)).toBe(modal);
+    expect(followingModal(document)).toBe(dismissing || initial > 150 ? modal : undefined);
+    for (const [nextY, nextRailY, follows] of [
+      [100, 174, false],
+      [200, 224, true],
+      [80, 174, false],
+      [230, 254, true],
+    ] as const) {
+      y = nextY;
+      railY = nextRailY;
+      await vi.advanceTimersByTimeAsync(20);
+      expect(movingModal(document)).toBe(modal);
+      expect(followingModal(document)).toBe(dismissing || follows ? modal : undefined);
+      expect(modalRequestedPixels(modal)).toBe(dismissing || follows ? 'image' : 'native');
+      expect(modal.hasAttribute('data-native-ui-modal-rail-clip')).toBe(follows);
+    }
+    modal.dispatchEvent(new Event('pointerup', { bubbles: true }));
+    await vi.advanceTimersByTimeAsync(40);
+    expect(followingModal(document)).toBeUndefined();
+    expect(modalRequestedPixels(modal)).toBe(dismissing ? 'image' : 'native');
+  } finally {
+    stop();
+    vi.useRealTimers();
+  }
+});
+
+test('non-interactive presentation and dismissal request images even while stationary above the boundary', () => {
+  document.body.innerHTML =
+    '<ion-app class="ios-theme-vertical-bars" style="--ios-theme-vertical-bars-toolbar-top:174px"><ion-modal><ion-button class="ios-theme-vertical-bars-toolbar-projection"></ion-button></ion-modal></ion-app>';
+  const modal = document.querySelector('ion-modal')!;
+  const wrapper = document.createElement('div');
+  wrapper.setAttribute('part', 'content');
+  wrapper.getBoundingClientRect = () => DOMRect.fromRect({ y: 100, width: innerWidth, height: innerHeight - 100 });
+  wrapper.getAnimations = () => [];
+  Object.defineProperty(wrapper, 'offsetWidth', { value: innerWidth });
+  modal.attachShadow({ mode: 'open' }).append(wrapper);
+  modal.querySelector('ion-button')!.getBoundingClientRect = () => DOMRect.fromRect({ y: 174, width: 48, height: 48 });
+  const stop = observeVerticalBarsModals(document);
+  try {
+    modal.dispatchEvent(new CustomEvent('ionModalWillPresent', { bubbles: true }));
+    expect(movingModal(document)).toBeUndefined();
+    expect(modalRequestedPixels(modal)).toBe('image');
+    modal.dispatchEvent(new CustomEvent('ionModalDidPresent', { bubbles: true }));
+    expect(modalRequestedPixels(modal)).toBe('native');
+    modal.dispatchEvent(new CustomEvent('ionModalWillDismiss', { bubbles: true }));
+    expect(movingModal(document)).toBeUndefined();
+    expect(modalRequestedPixels(modal)).toBe('image');
+    modal.dispatchEvent(new CustomEvent('ionModalDidDismiss', { bubbles: true }));
+    expect(modalRequestedPixels(modal)).toBe('native');
+  } finally {
+    stop();
   }
 });
 
@@ -143,9 +230,86 @@ test.each([
     app.classList.remove('ios-theme-vertical-bars');
     await vi.advanceTimersByTimeAsync(40);
     expect(modal.classList.contains('ios-theme-vertical-bars-modal')).toBe(false);
+    expect(modal.hasAttribute('data-native-ui-modal-rail-clip')).toBe(false);
   } finally {
     stop();
     vi.unstubAllGlobals();
     vi.useRealTimers();
   }
+});
+
+test.each(['custom source', 'unmeasured target', 'unknown boundary'])(
+  '%s retains dismissal images without assuming they are below the boundary',
+  (kind) => {
+    document.body.innerHTML =
+      '<ion-app class="ios-theme-vertical-bars"><ion-modal><ion-button class="ios-theme-vertical-bars-toolbar-projection"></ion-button></ion-modal></ion-app>';
+    const app = document.querySelector('ion-app')!;
+    if (kind !== 'unknown boundary') app.style.setProperty('--ios-theme-vertical-bars-toolbar-top', '174px');
+    const modal = document.querySelector('ion-modal')!;
+    Object.assign(modal, { presented: true, overlayIndex: 1 });
+    const content = document.createElement('div');
+    content.setAttribute('part', 'content');
+    Object.defineProperty(content, 'offsetWidth', { value: innerWidth });
+    content.getBoundingClientRect = () => DOMRect.fromRect({ y: 100, width: innerWidth, height: innerHeight });
+    content.getAnimations = () => [];
+    modal.attachShadow({ mode: 'open' }).append(content);
+    modal.querySelector('ion-button')!.getBoundingClientRect = () =>
+      DOMRect.fromRect({ y: 174, width: kind === 'unmeasured target' ? 0 : 48, height: 48 });
+    if (kind === 'custom source') {
+      const custom = document.createElement('div');
+      custom.setAttribute('data-native-ui-vertical-bars', '');
+      modal.append(custom);
+    }
+    const stop = observeVerticalBarsModals(document);
+    try {
+      modal.dispatchEvent(new Event('ionModalDidPresent', { bubbles: true }));
+      modal.dispatchEvent(new Event('ionModalWillDismiss', { bubbles: true }));
+      expect(modalRequestedPixels(modal)).toBe('image');
+      expect(modal.hasAttribute('data-native-ui-modal-rail-clip')).toBe(false);
+    } finally {
+      stop();
+    }
+  },
+);
+
+test.each([false, true])('a covered Modal keeps below-boundary image clipping with nested DOM=%s', (nested) => {
+  document.body.innerHTML = '<ion-app class="ios-theme-vertical-bars" style="--ios-theme-vertical-bars-toolbar-top:174px"></ion-app>';
+  const app = document.querySelector('ion-app')!;
+  const create = (index: number, y: number) => {
+    const modal = document.createElement('ion-modal');
+    Object.assign(modal, { presented: true, overlayIndex: index });
+    const content = document.createElement('div');
+    content.setAttribute('part', 'content');
+    Object.defineProperty(content, 'offsetWidth', { value: innerWidth });
+    content.getBoundingClientRect = () => DOMRect.fromRect({ y: y - 24, width: innerWidth, height: innerHeight });
+    content.getAnimations = () => [];
+    modal.attachShadow({ mode: 'open' }).append(content);
+    const target = document.createElement('ion-button');
+    target.className = 'ios-theme-vertical-bars-toolbar-projection';
+    target.setAttribute('data-native-ui-snapshot-visible', '');
+    target.getBoundingClientRect = () => DOMRect.fromRect({ y, width: 48, height: 48 });
+    modal.append(target);
+    app.append(modal);
+    return { modal, target };
+  };
+  const parent = create(1, 244);
+  const stop = observeVerticalBarsModals(document);
+  try {
+    parent.modal.dispatchEvent(new Event('ionModalDidPresent', { bubbles: true }));
+    expect(parent.modal.hasAttribute('data-native-ui-modal-rail-clip')).toBe(true);
+    const child = create(2, 174);
+    if (nested) {
+      parent.modal.append(child.modal);
+      const custom = document.createElement('div');
+      custom.setAttribute('data-native-ui-vertical-bars', '');
+      child.modal.append(custom);
+    }
+    child.modal.dispatchEvent(new Event('ionModalWillPresent', { bubbles: true }));
+    expect(parent.target.hasAttribute('data-native-ui-snapshot-visible')).toBe(true);
+    expect(parent.modal.hasAttribute('data-native-ui-modal-rail-clip')).toBe(true);
+    expect(child.modal.hasAttribute('data-native-ui-modal-rail-clip')).toBe(false);
+  } finally {
+    stop();
+  }
+  expect(parent.modal.hasAttribute('data-native-ui-modal-rail-clip')).toBe(false);
 });

@@ -8,16 +8,24 @@ const presentations = new WeakMap<Element, { animation: ModalAnimation; frame: F
 export const modalPresentation = (modal: Element) => presentations.get(modal);
 export const modalPreparing = (modal: Element) => presentations.has(modal) && presentations.get(modal) === null;
 
-const dismissing = new WeakSet<Element>();
-export const modalDismissing = (modal: Element) => dismissing.has(modal);
+const interactionLockedModals = new WeakSet<Element>();
 interface ModalState {
   top?: HTMLIonModalElement;
   moving?: HTMLIonModalElement;
+  requestedPixels: 'native' | 'image';
   stack: HTMLIonModalElement[];
 }
 const states = new WeakMap<Document, ModalState>();
 export const modalStack = (doc: Document): readonly HTMLIonModalElement[] => states.get(doc)?.stack ?? [];
 export const movingModal = (doc: Document) => states.get(doc)?.moving;
+export const followingModal = (doc: Document) => {
+  const state = states.get(doc);
+  return state?.requestedPixels === 'image' ? state.moving : undefined;
+};
+export const modalRequestedPixels = (modal: HTMLIonModalElement): 'native' | 'image' => {
+  const state = states.get(modal.ownerDocument);
+  return state?.top === modal ? state.requestedPixels : 'native';
+};
 export const modalMotionEvent = 'nativeUIModalMotion';
 
 export const topModal = (doc: Document): HTMLIonModalElement | undefined => states.get(doc)?.top;
@@ -73,9 +81,36 @@ export const releaseSheetBackdropGesture = (modal: HTMLElement, role?: string): 
   }
 };
 
+/** Unknown/custom layouts retain image following without assuming a clipping boundary. */
+const railPosition = (modal: HTMLElement, app: Element, appStyle: CSSStyleDeclaration): 'pinned' | 'below' | 'unknown' => {
+  if (
+    Array.from(modal.querySelectorAll('[data-native-ui-vertical-bars]')).some(
+      (source) => source.closest('ion-modal') === modal && !source.matches('ion-button, ion-buttons, ion-back-button, ion-menu-button'),
+    )
+  )
+    return 'unknown';
+  const positions = (surface: Element) =>
+    Array.from(
+      surface.querySelectorAll<HTMLElement>(
+        ':scope > .ios-theme-vertical-bars-toolbar-projection, :scope > .ios-theme-vertical-bars-back-button-projection',
+      ),
+    ).map((target) => {
+      const rect = target.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0
+        ? rect.y - (parseFloat(target.style.getPropertyValue('--ios-theme-vertical-bars-toolbar-offset')) || 0)
+        : NaN;
+    });
+  const configured = parseFloat(appStyle.getPropertyValue('--ios-theme-vertical-bars-toolbar-top'));
+  const boundary = Number.isFinite(configured) ? configured : Math.min(...positions(app));
+  const targets = positions(modal);
+  const scale = modal.ownerDocument.defaultView!.devicePixelRatio || 1;
+  if (!Number.isFinite(boundary) || !targets.length || !targets.every(Number.isFinite)) return 'unknown';
+  return targets.every((y) => Math.round(y * scale) <= Math.round(boundary * scale)) ? 'pinned' : 'below';
+};
+
 export const observeVerticalBarsModals = (doc: Document, animate: () => boolean = () => false): (() => void) => {
   const win = doc.defaultView!;
-  const state: ModalState = { stack: [] };
+  const state: ModalState = { stack: [], requestedPixels: 'native' };
   states.set(doc, state);
   const overlays = enableSupportIonicOverlays(undefined, doc)!;
   const observed = new Set<Element>();
@@ -95,7 +130,8 @@ export const observeVerticalBarsModals = (doc: Document, animate: () => boolean 
     const active = ionicModalStack(doc) as HTMLIonModalElement[];
     state.stack = active;
     const top = state.stack[state.stack.length - 1];
-    let changed = state.top !== top;
+    const topChanged = state.top !== top;
+    let changed = topChanged;
     state.top = top;
     const nextBounds = top && !modalPreparing(top) ? JSON.stringify(modalVerticalBarFrame(top)) : '';
     const moved = bounds !== '' && nextBounds !== '' && bounds !== nextBounds;
@@ -107,7 +143,6 @@ export const observeVerticalBarsModals = (doc: Document, animate: () => boolean 
       top &&
       app &&
       !modalPreparing(top) &&
-      !modalDismissing(top) &&
       (state.moving === top ? pointerActive || touchActive || animating || moved : moved && (pointerActive || touchActive || animating))
         ? top
         : undefined;
@@ -154,10 +189,31 @@ export const observeVerticalBarsModals = (doc: Document, animate: () => boolean 
         changed = true;
       }
     }
-    if (state.moving !== moving) {
-      const previous = state.moving;
+    const topPosition = top && app && appStyle ? railPosition(top, app, appStyle) : 'unknown';
+    const pinned = topPosition === 'pinned';
+    for (const modal of modals) {
+      const position =
+        modal === top
+          ? topPosition
+          : app && appStyle && modal.classList.contains(modalRailClass)
+            ? railPosition(modal, app, appStyle)
+            : 'unknown';
+      modal.toggleAttribute('data-native-ui-modal-rail-clip', modal.classList.contains(modalRailClass) && position === 'below');
+    }
+    // Non-interactive transitions use images regardless of the boundary. During
+    // interaction, only dragging/snapping below the boundary needs image following.
+    // This is a pixel request; Native ownership and image readiness are independent.
+    const interactionLocked = !!top && interactionLockedModals.has(top);
+    const requestedPixels = interactionLocked || (moving && !pinned) ? 'image' : 'native';
+    const previousMoving = state.moving;
+    if (topChanged || state.moving !== moving || state.requestedPixels !== requestedPixels) {
       state.moving = moving;
-      win.dispatchEvent(new CustomEvent(modalMotionEvent, { detail: { modal: moving ?? previous, moving: !!moving } }));
+      state.requestedPixels = requestedPixels;
+      win.dispatchEvent(
+        new CustomEvent(modalMotionEvent, {
+          detail: { modal: top ?? previousMoving, moving: !!moving, requestedPixels, following: requestedPixels === 'image' },
+        }),
+      );
       changed = true;
     }
     if (wanted.size !== observed.size || [...wanted].some((element) => !observed.has(element))) {
@@ -171,7 +227,8 @@ export const observeVerticalBarsModals = (doc: Document, animate: () => boolean 
         observed.add(element);
       }
     }
-    if (changed) win.dispatchEvent(new CustomEvent('nativeUIRefresh', { detail: { modalMotion: !!state.moving } }));
+    if (changed)
+      win.dispatchEvent(new CustomEvent('nativeUIRefresh', { detail: { modalMotion: !!state.moving || (pinned && !!previousMoving) } }));
     if (
       top &&
       (modalPreparing(top) ||
@@ -201,9 +258,10 @@ export const observeVerticalBarsModals = (doc: Document, animate: () => boolean 
       if (presentations.delete(modal)) bounds = '';
     }
     if (phase === 'willDismiss') {
-      dismissing.add(modal);
+      interactionLockedModals.add(modal);
       if (animate()) releaseSheetBackdropGesture(modal, (event as CustomEvent<{ role?: string }> | undefined)?.detail?.role);
-    } else if (phase === 'willPresent' || phase === 'didDismiss') dismissing.delete(modal);
+    } else if (phase === 'willPresent') interactionLockedModals.add(modal);
+    else if (phase === 'didPresent' || phase === 'didDismiss') interactionLockedModals.delete(modal);
     refresh();
   });
   doc.addEventListener(
@@ -265,10 +323,14 @@ export const observeVerticalBarsModals = (doc: Document, animate: () => boolean 
     listeners.abort();
     if (states.get(doc) !== state) return;
     states.delete(doc);
-    doc.querySelectorAll('ion-modal').forEach((modal) => presentations.delete(modal));
+    doc.querySelectorAll('ion-modal').forEach((modal) => {
+      presentations.delete(modal);
+      interactionLockedModals.delete(modal);
+    });
     doc.querySelectorAll<HTMLElement>(`.${modalRailClass}`).forEach((modal) => {
       modal.classList.remove(modalRailClass);
       modal.style.removeProperty(toolbarTop);
+      modal.removeAttribute('data-native-ui-modal-rail-clip');
     });
   };
 };

@@ -78,13 +78,13 @@ test('pins the pre-touch image across disabled updates and restores ownership on
   await started;
   expect(f.bridge.mock.calls.filter(([args]) => args.action === 'prepare')).toHaveLength(1);
   expect(f.manager.token).toBe('image-1');
-  expect(projectionState.owns(f.button)).toBe(true);
+  expect(projectionState.imageOwns(f.button)).toBe(true);
   expect(f.manager.begin()).toBeUndefined();
   f.manager.end();
   await vi.advanceTimersByTimeAsync(40);
   f.manager.updated(undefined, ['button'], 3);
   await drain();
-  expect(projectionState.owns(f.button)).toBe(false);
+  expect(projectionState.imageOwns(f.button)).toBe(false);
   expect(f.bridge).toHaveBeenCalledWith({ action: 'restored', token: 'image-1' });
 });
 test('keeps the Native return copy through the Web image removal paint', async () => {
@@ -149,7 +149,7 @@ test('entry returns without waiting but keeps Web pixels hidden until the native
   f.bridge.mockClear();
   f.bridge.mockImplementation(() => new Promise(() => {}));
   expect(f.manager.begin()).toBeUndefined();
-  expect(projectionState.owns(f.button)).toBe(true);
+  expect(projectionState.imageOwns(f.button)).toBe(true);
   expect(f.bridge).toHaveBeenCalledWith({ action: 'cover', token: 'image-1' });
   expect(f.button.hasAttribute('data-native-ui-snapshot-visible')).toBe(false);
   // Cleanup is not the subject of the stalled-bridge test.
@@ -298,7 +298,7 @@ test.each([false, true])('another overlay retires only the return copy (acknowle
   expect(f.bridge).toHaveBeenCalledWith({ action: 'restored', token: 'image-1' });
 });
 
-test('a stalled native restoration releases the image and Web ownership promptly', async () => {
+test('a stalled native restoration releases the image lease promptly', async () => {
   const f = await fixture();
   f.manager.consider(1, [f.candidate]);
   await drain();
@@ -306,14 +306,14 @@ test('a stalled native restoration releases the image and Web ownership promptly
   f.manager.end();
   await vi.advanceTimersByTimeAsync(251);
   expect(f.manager.token).toBeUndefined();
-  expect(projectionState.owns(f.button)).toBe(false);
+  expect(projectionState.imageOwns(f.button)).toBe(false);
   f.manager.consider(2, [f.candidate]);
   await drain();
   f.manager.begin();
   expect(f.manager.token).toBe('image-2');
 });
 
-test('a failed native cover notification releases ownership to ordinary Web projection', async () => {
+test('a failed native cover notification releases the image lease', async () => {
   const f = await fixture();
   f.manager.consider(1, [f.candidate]);
   await drain();
@@ -321,7 +321,7 @@ test('a failed native cover notification releases ownership to ordinary Web proj
   f.manager.begin();
   await vi.advanceTimersByTimeAsync(0);
   expect(f.manager.token).toBeUndefined();
-  expect(projectionState.owns(f.button)).toBe(false);
+  expect(projectionState.imageOwns(f.button)).toBe(false);
 });
 
 test('covered visual belongs to its source surface and does not append a foreground image', async () => {
@@ -430,12 +430,12 @@ test('moving modal keeps the background cache and resumes only after its own con
       parts: [expect.objectContaining({ ids: ['button'], x: 1, y: 2, width: 50, height: 40 })],
     }),
   );
-  expect(projectionState.owns(background.button)).toBe(true);
+  expect(projectionState.imageOwns(background.button)).toBe(true);
   clone.getBoundingClientRect = () => DOMRect.fromRect({ x: 394, y: 339, width: 48, height: 48 });
   foreground.bridge.mockImplementation(async (args) => (args.action === 'restore' ? new Promise(() => {}) : { shown: true }));
   foreground.manager.end();
-  expect(projectionState.owns(foreground.button)).toBe(false);
-  expect(projectionState.owns(background.button)).toBe(true);
+  expect(projectionState.imageOwns(foreground.button)).toBe(false);
+  expect(projectionState.imageOwns(background.button)).toBe(true);
   expect(foreground.bridge).toHaveBeenCalledWith(
     expect.objectContaining({ action: 'restore', token: 'image-1', parts: [expect.objectContaining({ ids: ['button'] })] }),
   );
@@ -445,7 +445,7 @@ test('moving modal keeps the background cache and resumes only after its own con
   foreground.manager.updated(background.manager.token, ['button'], 3);
   expect(clone.hasAttribute('data-native-ui-snapshot-visible')).toBe(false);
   expect(projectionState.preparedOwners.includes(background.button)).toBe(true);
-  expect(projectionState.owns(background.button)).toBe(true);
+  expect(projectionState.imageOwns(background.button)).toBe(true);
   await foreground.manager.destroy();
   expect(foreground.bridge.mock.calls.some(([args]) => args.action === 'reset')).toBe(false);
 });
@@ -478,7 +478,7 @@ test.each(['segment', 'floating-action-button'] as const)('%s reuses the prepare
   expect(f.bridge).toHaveBeenCalledWith(expect.objectContaining({ action: 'prepare', ids: ['button'] }));
   f.manager.begin();
   await vi.advanceTimersByTimeAsync(0);
-  expect(projectionState.owns(f.button)).toBe(true);
+  expect(projectionState.imageOwns(f.button)).toBe(true);
   expect(f.button.hasAttribute('data-native-ui-snapshot-visible')).toBe(true);
 });
 
@@ -490,7 +490,7 @@ test('an overlay retirement cannot invalidate the prepared pre-overlay layout', 
   f.manager.consider(2, []);
   f.manager.begin();
   expect(f.bridge).toHaveBeenCalledWith({ action: 'cover', token: 'image-1' });
-  expect(projectionState.owns(f.button)).toBe(true);
+  expect(projectionState.imageOwns(f.button)).toBe(true);
 });
 
 test.each(['button', 'button-group', 'back-button', 'menu-button', 'tab-bar', 'segment', 'floating-action-button', 'extension'] as const)(
@@ -555,7 +555,7 @@ test('a departing modal image cannot restore onto the newly exposed modal', asyn
   parent.append(f.button);
   f.manager.end();
   expect(f.bridge.mock.calls.some(([args]) => args.action === 'restore')).toBe(false);
-  expect(projectionState.owns(f.button)).toBe(false);
+  expect(projectionState.imageOwns(f.button)).toBe(false);
   expect(f.manager.token).toBeUndefined();
 });
 
@@ -604,12 +604,12 @@ test('card images follow the existing fallback proxy without moving source contr
   expect(proxy.parentElement).toBe(page);
   expect(f.button.parentElement).toBe(originalParent);
   expect(proxy.querySelector('[data-native-ui-projection-node]')).not.toBeNull();
-  expect(projectionState.owns(f.button)).toBe(true);
+  expect(projectionState.imageOwns(f.button)).toBe(true);
   expect(f.bridge.mock.calls.filter(([args]) => args.action === 'prepare')).toHaveLength(1);
   f.manager.end();
   f.manager.updated(undefined, ['button'], 2);
   expect(proxy.parentElement).toBe(document.body);
-  expect(projectionState.owns(f.button)).toBe(false);
+  expect(projectionState.imageOwns(f.button)).toBe(false);
   f.manager.begin(page);
   expect(page.querySelector('ion-button')).toBe(proxy);
   expect(page.querySelectorAll('ion-button')).toHaveLength(1);
@@ -639,7 +639,7 @@ test.each(['cover-false', 'cover-error', 'painted-error'])('ignores a previous p
   else fail(new Error('Delayed previous presentation failure'));
   await vi.advanceTimersByTimeAsync(0);
   expect(f.manager.token).toBe('image-1');
-  expect(projectionState.owns(f.button)).toBe(true);
+  expect(projectionState.imageOwns(f.button)).toBe(true);
   expect(f.button.hasAttribute('data-native-ui-snapshot-visible')).toBe(true);
 });
 

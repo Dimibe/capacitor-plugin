@@ -9,10 +9,18 @@ export const shadowSelector = 'ion-fab-button, ion-fab-list';
 const hasHostMotion = (style: CSSStyleDeclaration): boolean =>
   style.animationName !== 'none' || style.transitionDuration.split(',').some((value) => parseFloat(value) > 0);
 
+export const sourceConfigurationSupported = (fab: HTMLElement): boolean =>
+  fab.slot === 'fixed' &&
+  !!fab.parentElement?.matches('ion-content') &&
+  !hasHostMotion(getComputedStyle(fab)) &&
+  childElements(fab)
+    .filter((child) => child.matches('ion-fab-list'))
+    .every((list) => !hasHostMotion(getComputedStyle(list)));
+
 // FAB owns the batch; only its buttons draw glass. Closed lists keep their IDs
 // and resolved artwork, without inventing layout for display:none descendants.
 export const read = (fab: HTMLElement, id: (element: HTMLElement) => string): Candidate | undefined => {
-  if (fab.slot !== 'fixed' || !fab.parentElement?.matches('ion-content') || fab.contains(fab.ownerDocument.activeElement)) return;
+  if (!sourceConfigurationSupported(fab) || fab.contains(fab.ownerDocument.activeElement)) return;
   const children = childElements(fab);
   const main = children.filter((child) => child.matches('ion-fab-button'));
   const lists = children.filter((child) => child.matches('ion-fab-list'));
@@ -20,7 +28,6 @@ export const read = (fab: HTMLElement, id: (element: HTMLElement) => string): Ca
   if (lists.some((list) => list.closest(excluded) || childElements(list).some((child) => !child.matches('ion-fab-button')))) return;
   const buttons = [main[0], ...lists.flatMap((list) => childElements(list))] as HTMLIonFabButtonElement[];
   const style = getComputedStyle(fab);
-  if (hasHostMotion(style)) return;
   const transform = new DOMMatrixReadOnly(style.transform);
   if (!transform.is2D || transform.a !== 1 || transform.d !== 1 || transform.b || transform.c) return;
   const candidate: Candidate = {
@@ -84,7 +91,6 @@ export const read = (fab: HTMLElement, id: (element: HTMLElement) => string): Ca
     // transition. Custom host animations keep their complete Web rendering.
     if (hasHostMotion(s)) return;
     if (listStyle) {
-      if (hasHostMotion(listStyle)) return;
       const transform = new DOMMatrixReadOnly(listStyle.transform);
       if (!transform.is2D || transform.a !== 1 || transform.d !== 1 || transform.b || transform.c) return;
     }

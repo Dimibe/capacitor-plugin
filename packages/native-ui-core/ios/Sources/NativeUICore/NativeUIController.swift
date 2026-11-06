@@ -291,9 +291,12 @@ public final class NativeUIController: NSObject, UITabBarDelegate {
                 return frames
             }
             let views: (Set<String>) -> [UIView]? = { ids in
+                let currentIDs = Set(self.snapshotControls.map(\.id))
+                // Retiring views for an image does not release its source or prepared pixels.
+                if ids.isDisjoint(with: currentIDs) { return [] }
                 let railIDs = Set(self.snapshotControls.filter { $0.placement == .verticalBars }.map(\.id))
                 // A shared rail can only retire when every one of its controls has a prepared image.
-                guard Set(self.snapshotControls.map(\.id)).isSuperset(of: ids),
+                guard currentIDs.isSuperset(of: ids),
                       ids.isDisjoint(with: railIDs) || ids.isSuperset(of: railIDs) else {
                     return nil
                 }

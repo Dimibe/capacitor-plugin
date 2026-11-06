@@ -99,13 +99,14 @@ export const createHTMLWebProjection = (doc: Document, options: NativeUIRuntimeO
         // lose the marker and can return to the Web rail on the next render.
         if (!htmlRailSource(source) || host.contains(source)) continue;
         const covered =
-          projectionState.isVisible(source) ||
-          (projectionState.owns(source) && !!owned.get(source)?.clone.hasAttribute(projectionState.imageMarker));
+          projectionState.imageVisible(source) ||
+          (projectionState.imageOwns(source) && !!owned.get(source)?.clone.hasAttribute(projectionState.imageMarker));
         // Keep a fixed fallback host available before the first native capture.
         const prepared =
           (source.hasAttribute(marker) && source.hasAttribute('data-native-ui-vertical-bars')) ||
           projectionState.preparedOwners.includes(source);
-        if ((suspended && !covered) || (!covered && !prepared && (source.closest(`[${marker}]`) || projectionState.owns(source)))) continue;
+        if ((suspended && !covered) || (!covered && !prepared && (source.closest(`[${marker}]`) || projectionState.imageOwns(source))))
+          continue;
         // Keep the prepared target stable through coverage and native restoration.
         // Reading a changed/disabled source here must not replace its pre-touch image.
         const existing = owned.get(source);
@@ -144,7 +145,7 @@ export const createHTMLWebProjection = (doc: Document, options: NativeUIRuntimeO
               !host.isConnected ||
               current.control.items[0].disabled ||
               source.closest(`[${marker}]`) ||
-              projectionState.owns(source)
+              projectionState.imageOwns(source)
             )
               return;
             source.click(); // Source owns submission, custom handlers and back navigation.

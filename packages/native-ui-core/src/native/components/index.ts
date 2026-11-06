@@ -31,8 +31,14 @@ export const motionSelector = [
 export const isVerticalBarsCandidate = isVerticalBarsSource;
 const fixedToolbarSelector = [button.tag, buttons.tag, menuButton.tag].join(', ');
 
+/** Reject unsupported source configuration even when geometry is not measurable. */
+export const sourceConfigurationSupported = (element: HTMLElement): boolean => {
+  if (element.matches(fixedToolbarSelector)) return inFixedToolbar(element);
+  return !element.matches(fab.tag) || fab.sourceConfigurationSupported(element);
+};
+
 export const readCandidate = (element: HTMLElement, id: Identify, options: VerticalControlAreaOptions = {}): Candidate | undefined => {
-  if (element.matches(fixedToolbarSelector) && !inFixedToolbar(element)) return;
+  if (!sourceConfigurationSupported(element)) return;
   const verticalBars = isVerticalBarsCandidate(element);
   if (
     (!element.classList.contains('ios') && !verticalBars) ||

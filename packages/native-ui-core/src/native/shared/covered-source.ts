@@ -9,7 +9,7 @@ const createState = () => {
   const targets = new WeakMap<HTMLElement, HTMLElement>();
   const imageMarker = 'data-native-ui-snapshot';
   const collect = (key: 'owners' | 'visibleOwners' | 'preparedOwners') => [...new Set([...managers].flatMap((manager) => manager[key]))];
-  return {
+  const state = {
     imageMarker,
     nativeOwns: (source: HTMLElement) => [...nativeOwners].some((owns) => owns(source)),
     registerNativeOwner(owns: (source: HTMLElement) => boolean) {
@@ -42,8 +42,10 @@ const createState = () => {
     get preparedOwners(): readonly HTMLElement[] {
       return collect('preparedOwners');
     },
-    owns: (element: HTMLElement) => collect('owners').some((owner) => owner === element || owner.contains(element)),
-    isVisible: (element: HTMLElement) => collect('visibleOwners').some((owner) => owner === element || owner.contains(element)),
+    imageOwns: (element: HTMLElement) => collect('owners').some((owner) => owner === element || owner.contains(element)),
+    imageVisible: (element: HTMLElement) => collect('visibleOwners').some((owner) => owner === element || owner.contains(element)),
+    // An image can still protect pixels while Native is being restored.
+    hasImageHandoff: (element: HTMLElement): boolean => state.imageOwns(element) || state.imageVisible(element),
     getTarget: (source: HTMLElement) => targets.get(source),
     setTarget: (source: HTMLElement, target: HTMLElement) => {
       targets.set(source, target);
@@ -75,6 +77,7 @@ const createState = () => {
       return image(record.target) || (record.type === 'childList' && nodes.length > 0 && nodes.every(image));
     },
   };
+  return state;
 };
 export type NativeUIProjectionState = ReturnType<typeof createState>;
 export const getProjectionState = (doc: Document): NativeUIProjectionState => {

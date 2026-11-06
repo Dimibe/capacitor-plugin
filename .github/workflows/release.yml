@@ -37,7 +37,7 @@ jobs:
       - run: npm test
       - run: npm run test:esm
       - name: Verify Engine native dependency
-        run: sh scripts/verify-engine-maven.sh "$(node -p "require('./package.json').dependencies['@webview-native-ui/engine'].slice(1)")"
+        run: sh scripts/verify-engine-maven.sh "$(node -p "require('./package.json').dependencies['@webview-native-ui/engine']")"
       - name: Publish plugin
         run: |
           VERSION=${GITHUB_REF_NAME#capacitor-v}

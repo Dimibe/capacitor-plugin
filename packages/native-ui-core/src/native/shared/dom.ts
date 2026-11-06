@@ -87,12 +87,18 @@ export const verticalBarsEnteringPage = (element: HTMLElement): HTMLElement | un
   const page = element.closest<HTMLElement>('.ion-page-invisible');
   return page && enteringPages.has(page) && page.closest('ion-app.ios-theme-vertical-bars') ? page : undefined;
 };
-export const createVerticalBarsPageState = () => {
-  const departed = new WeakSet<HTMLElement>();
+export const createPageProjectionState = () => {
+  const departed = new WeakMap<HTMLElement, 'leaving' | 'inactive'>();
   return {
     isDeparted(element: HTMLElement, includeHorizontal = false): boolean {
       const page = element.closest<HTMLElement>('.ion-page');
       return !!page && departed.has(page) && (includeHorizontal || !!element.closest('ion-app.ios-theme-vertical-bars'));
+    },
+    // Selection can leave at WillLeave; ownership ends only after DidLeave.
+    isInactive(element: HTMLElement): boolean {
+      for (let page = element.closest<HTMLElement>('.ion-page'); page; page = page.parentElement?.closest<HTMLElement>('.ion-page') ?? null)
+        if (page.classList.contains('ion-page-hidden') || departed.get(page) === 'inactive') return true;
+      return false;
     },
     lifecycle(event: Event): void {
       // Avoid instanceof so stale listeners stay safe after global teardown.
@@ -100,12 +106,13 @@ export const createVerticalBarsPageState = () => {
       if (!page?.matches('.ion-page')) return;
       const entering = event.type === 'ionViewWillEnter';
       if (entering || event.type === 'ionViewDidEnter') departed.delete(page);
-      else if (event.type === 'ionViewWillLeave' || event.type === 'ionViewDidLeave') departed.add(page);
+      else if (event.type === 'ionViewWillLeave') departed.set(page, 'leaving');
+      else if (event.type === 'ionViewDidLeave') departed.set(page, 'inactive');
       setVerticalBarsEnteringPage(page, entering);
     },
     cancel(entering?: HTMLElement, leaving?: HTMLElement): void {
       if (entering) {
-        departed.add(entering);
+        departed.set(entering, 'inactive');
         setVerticalBarsEnteringPage(entering, false);
       }
       if (leaving) departed.delete(leaving);
@@ -269,9 +276,10 @@ export const unprojected = <T>(elements: Iterable<HTMLElement>, read: () => T): 
   }
 };
 
-const readVisible = (element: HTMLElement, allowOutsideViewport: boolean): boolean => {
+type SourceVisibility = 'visible' | 'hidden' | 'pending' | 'unsupported';
+const readVisibility = (element: HTMLElement, allowOutsideViewport: boolean): SourceVisibility => {
   const enteringPage = isVerticalBarsSource(element) ? verticalBarsEnteringPage(element) : undefined;
-  if (!element.isConnected || isExcluded(element, enteringPage) || isNativeUIDisabled(element)) return false;
+  if (!element.isConnected || isExcluded(element, enteringPage) || isNativeUIDisabled(element)) return 'hidden';
   for (let current: HTMLElement | null = element; current; current = current.parentElement) {
     const style = getComputedStyle(current);
     if (
@@ -279,7 +287,7 @@ const readVisible = (element: HTMLElement, allowOutsideViewport: boolean): boole
       (style.visibility !== 'visible' && getUnprojectedVisibility(current) !== 'visible') ||
       (Number(style.opacity) === 0 && !current.hasAttribute(fadeMarker) && current !== enteringPage)
     )
-      return false;
+      return 'hidden';
     // Ordinary controls on moving/collapsing/custom transformed surfaces stay in Web coordinates.
     // VerticalBars rail controls are placed independently of their Web coordinates and must remain
     // owned while Ionic transforms the content behind an open menu.
@@ -290,18 +298,19 @@ const readVisible = (element: HTMLElement, allowOutsideViewport: boolean): boole
       current !== element &&
       !current.matches('ion-tab-bar')
     )
-      return false;
+      return current.getAnimations?.().some((animation) => animation.playState === 'running') ? 'pending' : 'unsupported';
   }
   const rect = element.getBoundingClientRect();
-  return (
-    rect.width > 0 &&
-    rect.height > 0 &&
-    (allowOutsideViewport || (rect.left >= -1 && rect.top >= -1 && rect.right <= innerWidth + 1 && rect.bottom <= innerHeight + 1))
-  );
+  if (!(rect.width > 0 && rect.height > 0)) return 'pending';
+  return allowOutsideViewport || (rect.left >= -1 && rect.top >= -1 && rect.right <= innerWidth + 1 && rect.bottom <= innerHeight + 1)
+    ? 'visible'
+    : 'unsupported';
 };
 
+export const sourceVisibility = (element: HTMLElement, allowOutsideViewport = false): SourceVisibility =>
+  withoutPrehide(element, () => readVisibility(element, allowOutsideViewport));
 export const visible = (element: HTMLElement, allowOutsideViewport = false): boolean =>
-  withoutPrehide(element, () => readVisible(element, allowOutsideViewport));
+  sourceVisibility(element, allowOutsideViewport) === 'visible';
 
 export const frame = (rect: DOMRect, origin?: DOMRect): Frame => ({
   x: rect.x - (origin?.x ?? 0),

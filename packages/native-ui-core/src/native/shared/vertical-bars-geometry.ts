@@ -1,6 +1,6 @@
 import type { Frame, NativeUIVerticalBarFrame } from '../definitions.js';
 
-const measurements = new WeakMap<Element, { frame: Frame; viewport: string }>();
+const measurements = new WeakMap<Element, { frame: NativeUIVerticalBarFrame; viewport: string }>();
 const viewport = (element: Element) => {
   const win = element.ownerDocument.defaultView!;
   const classes = element.closest('ion-app')?.classList;
@@ -12,13 +12,51 @@ export const validVerticalBarFrame = (frame: Frame) =>
 
 export const forgetVerticalBarFrame = (element: Element) => measurements.delete(element);
 
-export const rememberVerticalBarFrame = (element: Element, frame: Frame) => {
+export const rememberVerticalBarFrame = (element: Element, frame: NativeUIVerticalBarFrame) => {
   if (validVerticalBarFrame(frame)) measurements.set(element, { frame, viewport: viewport(element) });
 };
 
-export const verticalBarFrame = (element: Element): Frame | undefined => {
+export const verticalBarFrame = (element: Element): NativeUIVerticalBarFrame | undefined => {
   const saved = measurements.get(element);
   return saved?.viewport === viewport(element) ? saved.frame : undefined;
+};
+
+const modalRailSlot = 'native-ui-vertical-bars';
+
+/** Image targets share the dialog's transform; interactive Web fallback keeps its normal slot. */
+export const placeModalRailTarget = (target: HTMLElement, surface: HTMLElement) => {
+  if (!surface.matches('ion-modal') || !surface.shadowRoot) return;
+  if (
+    !target.inert ||
+    !surface.ownerDocument.defaultView!.getComputedStyle(surface).getPropertyValue('--ios-theme-vertical-bars-modal-toolbar-top').trim()
+  )
+    return;
+  const content = surface.shadowRoot.querySelector<HTMLElement>('[part~="content"]');
+  if (!content) return;
+  let slot = surface.shadowRoot.querySelector<HTMLSlotElement>(`slot[name="${modalRailSlot}"]`);
+  if (!slot) {
+    slot = surface.ownerDocument.createElement('slot');
+    slot.name = modalRailSlot;
+    slot.setAttribute('data-native-ui-projection-node', '');
+  }
+  if (slot.parentElement !== content) content.append(slot);
+  target.slot = modalRailSlot;
+  target.style.position = 'absolute';
+  target.style.top = 'calc(var(--ios-theme-vertical-bars-modal-toolbar-top) + var(--ios-theme-vertical-bars-toolbar-offset, 0px))';
+  // Native bounds and theme edges are relative to the surface. Convert both
+  // horizontal anchors into the dialog without accumulating offsets on rereads.
+  // Layout offsets deliberately exclude translation, scale and transform-origin.
+  // Those transforms must carry the image, rather than enter this conversion.
+  const style = surface.ownerDocument.defaultView!.getComputedStyle(content);
+  const left = content.offsetLeft + (parseFloat(style.borderLeftWidth) || 0);
+  const right = content.offsetLeft + content.offsetWidth - (parseFloat(style.borderRightWidth) || 0);
+  target.style.marginLeft = `${-left}px`;
+  target.style.marginRight = `${right - surface.clientWidth}px`;
+};
+
+export const removeEmptyModalRailSlot = (surface: HTMLElement) => {
+  const slot = surface.shadowRoot?.querySelector<HTMLSlotElement>(`slot[name="${modalRailSlot}"][data-native-ui-projection-node]`);
+  if (slot && !slot.assignedElements().length) slot.remove();
 };
 
 /** Convert the native viewport rectangle into the clone's positioning container. */
@@ -46,6 +84,8 @@ export const alignVerticalBarClone = (clone: HTMLElement, source: Element, paren
     margin: '0',
     boxSizing: 'border-box',
   });
+  if (source.closest('ion-modal'))
+    clone.style.setProperty('--native-ui-modal-rail-image-radius', `${frame.cornerRadius ?? Math.min(frame.width, frame.height) / 2}px`);
 };
 
 export const alignVerticalTabBar = (

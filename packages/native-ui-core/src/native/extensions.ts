@@ -87,6 +87,7 @@ export const readExtension = (
   id: Identify,
   diagnose: (reason: string) => void = () => {},
   nativeScroll = false,
+  deferred: () => void = () => {},
 ): Candidate | undefined => {
   const skip = (reason: string): undefined => {
     diagnose(reason);
@@ -103,7 +104,10 @@ export const readExtension = (
     } catch {
       return skip('scroll-reader-error: cannot resolve scroll owner.');
     }
-    if (!scrollElement) return skip('missing-scroll-owner: the scroll element is not ready.');
+    if (!scrollElement) {
+      deferred();
+      return skip('missing-scroll-owner: the scroll element is not ready.');
+    }
   }
   const scroll = scrollElement ? readScrollPlacement(element, scrollElement, id) : undefined;
   if (scrollElement && !scroll) return skip('unsupported-scroll: use one untransformed overflow container.');

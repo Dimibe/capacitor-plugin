@@ -6,7 +6,7 @@ import {
   type OverlayChange,
 } from '@webview-native-ui/engine';
 import { enableSupportIonicOverlays, coveredIonicSurface } from '@webview-native-ui/engine/ionic';
-import { movingModal, modalMotionEvent } from './shared/modal.js';
+import { movingModal, followingModal, modalMotionEvent } from './shared/modal.js';
 import { coverOverlayBackground, usesCoveredBackground } from './overlays/covered-overlay.js';
 import { getProjectionState } from './shared/covered-source.js';
 import { createCoveredSnapshots, type CoveredSnapshots } from './shared/covered-snapshot.js';
@@ -34,8 +34,8 @@ import {
   modalUsesVerticalBars,
   modalVerticalBarFrame,
   modalPreparing,
-  modalDismissing,
   modalPresentation,
+  modalRequestedPixels,
 } from './shared/modal.js';
 import type { PluginListenerHandle } from '../host.js';
 import { LIFECYCLE_WILL_ENTER, LIFECYCLE_WILL_LEAVE, LIFECYCLE_DID_ENTER, LIFECYCLE_DID_LEAVE } from './shared/events.js';
@@ -50,11 +50,18 @@ import type {
   NativeUIPlugin,
   NativeUIStatus,
 } from './definitions.js';
-import { readCandidate, selector, shadowSelector, motionSelector, isVerticalBarsCandidate } from './components/index.js';
+import {
+  readCandidate,
+  selector,
+  shadowSelector,
+  motionSelector,
+  isVerticalBarsCandidate,
+  sourceConfigurationSupported,
+} from './components/index.js';
 import {
   activateProjectedElement,
   inFixedToolbar,
-  createVerticalBarsPageState,
+  createPageProjectionState,
   isVerticalBarsSource,
   preferredVerticalBarsBack,
   marker,
@@ -64,6 +71,9 @@ import {
   contentPressOnlyMutation,
   rejectedClass,
   unprojected,
+  sourceVisibility,
+  isNativeUIDisabled,
+  isPermanentlyExcluded,
 } from './shared/dom.js';
 import { createIconRenderer } from './shared/icons.js';
 import type { Candidate } from './shared/candidate.js';
@@ -74,6 +84,7 @@ import { createCrossfade, fadeMarker } from './shared/crossfade.js';
 const railPreservingOverlays = 'ion-toast, ion-popover, ion-picker';
 const verticalBarsMarker = 'data-native-ui-vertical-bars';
 const verticalBarsMemberMarker = 'data-native-ui-vertical-bars-member';
+type NativeReleaseReason = 'unavailable' | 'rejected' | 'context-ended' | 'requested';
 
 export const createRuntime = async (
   doc: Document,
@@ -108,14 +119,28 @@ export const createRuntime = async (
   const coveredSurface = (overlay: HTMLElement) => coveredIonicSurface(overlay) as HTMLIonModalElement | undefined;
   const ids = new WeakMap<Element, string>();
   let rejected = new WeakMap<HTMLElement, string>();
-  const sources = new Map<HTMLElement, string | null>();
+  const nativeOwners = new Map<
+    HTMLElement,
+    {
+      previousAriaHidden: string | null;
+      input: Candidate;
+      surface?: HTMLIonModalElement;
+      binding: string;
+    }
+  >();
+  const bindingIds = new WeakMap<HTMLElement, number>();
+  let nextBindingId = 0;
+  const bindingId = (element: HTMLElement) => {
+    if (!bindingIds.has(element)) bindingIds.set(element, ++nextBindingId);
+    return bindingIds.get(element)!;
+  };
   let acquiringSources: Set<HTMLElement> | undefined;
   const unregisterNativeOwner = projectionState.registerNativeOwner(
-    (source) => sources.has(source) || acquiringSources?.has(source) === true,
+    (source) => nativeOwners.has(source) || acquiringSources?.has(source) === true,
   );
   const verticalBarsOwners = new Set<HTMLElement>();
   const verticalBarsMembers = new Set<HTMLElement>();
-  const suspended = new Set<HTMLElement[]>();
+  const suspended = new Map<HTMLElement[], ReadonlySet<HTMLElement>>();
   const navigation = createHorizontalNavigation();
   const unregisterTransitionActive = projectionState.setTransitionActive(() => !!navigation.current);
   const verticalNavigation = createVerticalNavigation();
@@ -130,7 +155,7 @@ export const createRuntime = async (
       : candidate.control;
   const pages = new Set<HTMLElement>();
   const tabActivationPages = new Map<HTMLElement, number>();
-  const verticalBarsPages = createVerticalBarsPageState();
+  const pageProjection = createPageProjectionState();
   const overlayMonitor = enableSupportIonicOverlays(undefined, doc)!;
   const presented = overlayMonitor.active;
   const blockingRailOverlays = new WeakSet<HTMLElement>();
@@ -198,6 +223,13 @@ export const createRuntime = async (
     .ion-cloned-element:is([${verticalBarsMarker}], [${verticalBarsMemberMarker}]):not([${fadeMarker}]):not([data-native-ui-snapshot-visible]),
     .ion-cloned-element:is([data-native-ui-snapshot-source], [data-native-ui-proxy-prepared]):not([data-native-ui-snapshot-visible]) { opacity: 0 !important; content-visibility: hidden !important; }
     [${marker}], [${marker}] *, [${navigationMarker}], [${navigationMarker}] * { pointer-events: none !important; }
+    /* Clip snapshot padding only for the Modal rail below its pinned boundary. */
+    ion-modal.ios-theme-vertical-bars-modal[data-native-ui-modal-rail-clip] > [slot="native-ui-vertical-bars"][data-native-ui-snapshot-visible],
+    ion-modal.ios-theme-vertical-bars-modal[data-native-ui-modal-rail-clip] > [slot="native-ui-vertical-bars"] [data-native-ui-snapshot-visible] {
+      overflow: visible !important;
+      /* Preserve the glass rim outside the measured control bounds. */
+      clip-path: inset(-1px round calc(var(--native-ui-modal-rail-image-radius, 999px) + 1px)) !important;
+    }
     /* The theme's fixed Back clone must not reintroduce a Web button while
        navigation keeps its source under native ownership. */
     :is(ion-nav, ion-router-outlet):has(.ion-page:not(.ion-page-hidden) ion-back-button:is([${marker}], [${navigationMarker}]))
@@ -212,7 +244,17 @@ export const createRuntime = async (
       pointer-events: none;
     }`;
 
-  const restore = (element: HTMLElement, instant = false) => {
+  // Candidacy and image readiness are not ownership. Every Web transfer has an
+  // explicit cause; motion and image handoffs retain the acquired Native owner.
+  const releaseNativeOwner = (element: HTMLElement, reason: NativeReleaseReason, instant = false) => {
+    const imageVisible = projectionState.imageVisible(element);
+    if (nativeOwners.has(element)) {
+      diagnose(`native-release: ${reason}`, element);
+      // Composition changed: cancel prepared pixels and in-flight capture alike.
+      // Neither a cached image nor a late reply may reacquire a released source.
+      if (imageVisible) handoffInstant = true;
+      imagesFor(nativeOwners.get(element)!.surface)?.invalidate();
+    }
     lastSnapshot = '';
     search.release(element);
     element.removeAttribute(marker);
@@ -220,21 +262,18 @@ export const createRuntime = async (
       crossfade.play(
         element,
         false,
-        instant ||
-          handoffInstant ||
-          projectionState.isVisible(element) ||
-          (isVerticalBarsSource(element) && !element.matches('ion-tab-bar')),
+        instant || handoffInstant || imageVisible || (isVerticalBarsSource(element) && !element.matches('ion-tab-bar')),
       );
     if (element.getAttribute('aria-hidden') === 'true') {
-      const previous = sources.get(element);
+      const previous = nativeOwners.get(element)?.previousAriaHidden;
       if (previous == null) element.removeAttribute('aria-hidden');
       else element.setAttribute('aria-hidden', previous);
     }
-    sources.delete(element);
+    nativeOwners.delete(element);
     element.dispatchEvent(new CustomEvent('nativeUIChange'));
   };
-  const restoreAll = () => {
-    Array.from(sources.keys()).forEach((element) => restore(element));
+  const releaseNativeOwners = () => {
+    Array.from(nativeOwners.keys()).forEach((element) => releaseNativeOwner(element, 'context-ended'));
     verticalBarsOwners.forEach((element) => element.removeAttribute(verticalBarsMarker));
     verticalBarsOwners.clear();
     verticalBarsMembers.forEach((element) => element.removeAttribute(verticalBarsMemberMarker));
@@ -263,30 +302,71 @@ export const createRuntime = async (
     element.classList.toggle(rejectedClass, value);
   };
   const measuringPointerPages = new WeakSet<HTMLElement>();
-  const readEnabledCandidate = (element: HTMLElement): Candidate | undefined => {
-    if (projectionState.owns(element)) return;
-    if (imagesFor() && movingModal(doc) && element.closest('ion-modal') === movingModal(doc) && isVerticalBarsSource(element)) return;
-    if (options.root && !options.root.contains(element)) return;
+  type SourceRead = { kind: 'ready'; candidate: Candidate } | { kind: 'deferred' | 'suppressed' | 'hidden' | 'unavailable' };
+  const deferred: SourceRead = { kind: 'deferred' };
+  const unavailable: SourceRead = { kind: 'unavailable' };
+  const suppressed: SourceRead = { kind: 'suppressed' };
+  const sourceReads = new Map<HTMLElement, SourceRead['kind']>();
+  const nativeProjectionAllowed = (element: HTMLElement) => {
+    if (
+      !element.hasAttribute('data-native-ui') &&
+      !extensions.some((extension) => element.matches(extension.selector)) &&
+      !sourceConfigurationSupported(element)
+    )
+      return false;
+    if (isNativeUIDisabled(element)) return false;
+    if (element.closest('.ios-theme-disabled, .ios26-disabled') && isPermanentlyExcluded(element)) return false;
+    if (
+      !extensions.some((extension) => element.matches(extension.selector)) &&
+      (isVerticalBarsSource(element) || nativeOwners.get(element)?.input.control.placement === 'vertical-bars') &&
+      (options.verticalBars?.enabled === false || !nativeVerticalBars() || !modalUsesVerticalBars(element))
+    )
+      return false;
+    return true;
+  };
+  const sourceContextActive = (element: HTMLElement) =>
+    element.isConnected &&
+    element.ownerDocument === doc &&
+    scope.contains(element) &&
+    !pageProjection.isInactive(element) &&
+    !element.closest('ion-modal.overlay-hidden');
+  // Unavailable is a support/selection verdict. A skipped or unmeasurable read
+  // is deferred and cannot release a previously accepted Native source.
+  const readSource = (element: HTMLElement): SourceRead => {
+    if (!element.matches(discovery) || !sourceContextActive(element) || !nativeProjectionAllowed(element)) return unavailable;
+    if (projectionState.imageOwns(element)) return suppressed;
+    const extension = extensions.find((definition) => element.matches(definition.selector));
+    const visibility = sourceVisibility(
+      element,
+      isVerticalBarsSource(element) || !!options.nativeScroll || extension?.placement === 'tab-accessory',
+    );
+    if (visibility === 'hidden') return { kind: 'hidden' };
+    if (visibility === 'pending') return deferred;
+    if (visibility === 'unsupported') return unavailable;
     if (element.matches('ion-back-button') && element.closest('ion-app.ios-theme-vertical-bars') && !isVerticalBarsCandidate(element))
-      return;
-    if (extensions.some((extension) => element.matches(extension.selector))) {
-      const extension = extensions.find((definition) => element.matches(definition.selector))!;
-      const unavailable = options.unavailableExtensions?.get(extension.name);
-      if (unavailable) {
-        diagnose(`${extension.name}: ${unavailable}`, element);
-        return;
+      return unavailable;
+    if (extension) {
+      const unavailableReason = options.unavailableExtensions?.get(extension.name);
+      if (unavailableReason) {
+        diagnose(`${extension.name}: ${unavailableReason}`, element);
+        return unavailable;
       }
+      let pending = false;
       const candidate = readExtension(
         element,
         extensions,
         id,
         (reason) => diagnose(`${extension.name}: ${reason}`, element),
         options.nativeScroll,
+        () => {
+          pending = true;
+        },
       );
-      if (candidate && !scrollBindings.eligible(candidate, win.innerWidth)) return undefined; // New bindings are acquired at rest; established bindings keep following.
-      return candidate;
+      if (candidate && !scrollBindings.eligible(candidate, win.innerWidth)) return unavailable; // New bindings are acquired at rest; established bindings keep following.
+      return candidate ? { kind: 'ready', candidate } : pending ? deferred : unavailable;
     }
-    if (options.source === 'extensions') return;
+    if (options.source === 'extensions') return unavailable;
+    if (Array.from(element.querySelectorAll('ion-icon')).some((icon) => !icon.shadowRoot?.querySelector('svg'))) return deferred;
     if (options.source === 'html' || element.matches(htmlSelector)) {
       const candidate = readHTMLControl(element, id, options);
       if (!candidate) {
@@ -294,15 +374,15 @@ export const createRuntime = async (
           'unsupported-control: check the source visibility, accessible name, disabled ancestors, and supported HTML markup.',
           element,
         );
-        return;
+        return unavailable;
       }
       const rail = candidate.control.placement === 'vertical-bars';
-      if (rail && !nativeVerticalBars()) return;
-      return candidate;
+      if (rail && !nativeVerticalBars()) return unavailable;
+      return { kind: 'ready', candidate };
     }
-    if (element.querySelector(htmlSelector)) return; // A shared automatic surface must not cover explicitly selected descendants.
-    if (options.ionic?.auto === false) return;
-    if (options.verticalBars?.enabled === false && isVerticalBarsCandidate(element)) return;
+    if (element.querySelector(htmlSelector)) return unavailable; // A shared automatic surface must not cover explicitly selected descendants.
+    if (options.ionic?.auto === false) return unavailable;
+    if (options.verticalBars?.enabled === false && isVerticalBarsCandidate(element)) return unavailable;
     const pointerPage = isVerticalBarsCandidate(element) ? element.closest<HTMLElement>('.ion-page') : undefined;
     let candidate: Candidate | undefined;
     if (pointerPage && getComputedStyle(pointerPage).pointerEvents === 'none') {
@@ -321,7 +401,7 @@ export const createRuntime = async (
       }
     } else candidate = readCandidate(element, id, options);
     if (candidate && isVerticalBarsCandidate(element) && !element.closest('[data-native-ui-placement="element"]')) {
-      if (!nativeVerticalBars()) return undefined;
+      if (!nativeVerticalBars()) return unavailable;
       candidate.control.placement = 'vertical-bars';
       if (['button', 'button-group', 'menu-button'].includes(candidate.control.kind)) {
         const slot = (element.matches('ion-buttons') ? element : (element.closest('ion-buttons') ?? element)).getAttribute('slot');
@@ -329,7 +409,31 @@ export const createRuntime = async (
       }
     }
     if (!candidate) diagnose('unsupported-control: check the supported Ionic markup, fixed placement, and styling requirements.', element);
-    return candidate && controlEnabled(candidate) ? candidate : undefined;
+    return candidate && controlEnabled(candidate) ? { kind: 'ready', candidate } : unavailable;
+  };
+  const readEnabledCandidate = (element: HTMLElement): Candidate | undefined => {
+    const result = readSource(element);
+    return result.kind === 'ready' ? result.candidate : undefined;
+  };
+  const readSnapshotSource = (element: HTMLElement): Candidate | undefined => {
+    const result = readSource(element);
+    if (result.kind === 'ready' && candidateSources(result.candidate).some(projectionState.imageOwns)) {
+      sourceReads.set(element, 'suppressed');
+      return;
+    }
+    sourceReads.set(element, result.kind);
+    if (result.kind === 'ready') return result.candidate;
+    if (result.kind === 'deferred') {
+      const owner = [...nativeOwners.values()].find((owner) => owner.input.element === element);
+      const previous = owner && owner.binding === JSON.stringify(binding(owner.input)) ? owner.input : undefined;
+      if (
+        previous &&
+        candidateSources(previous).every(
+          (source) => nativeOwners.has(source) && sourceContextActive(source) && nativeProjectionAllowed(source),
+        )
+      )
+        return { ...previous, assets: undefined, icons: [] };
+    }
   };
   const flush = async (transition?: NonNullable<typeof navigation.current>) => {
     if (stopped) return;
@@ -344,9 +448,9 @@ export const createRuntime = async (
   };
   const blocked = (element: HTMLElement) =>
     Array.from(tabActivationPages.keys()).some((page) => page.contains(element)) ||
-    verticalBarsPages.isDeparted(element, true) ||
+    pageProjection.isDeparted(element, true) ||
     (!isVerticalBarsSource(element) &&
-      (Array.from(suspended).some((scopes) => scopes.some((scope) => scope.contains(element))) ||
+      (Array.from(suspended.keys()).some((scopes) => scopes.some((scope) => scope.contains(element))) ||
         Array.from(pages).some((scope) => scope.contains(element)) ||
         Array.from(moving.keys()).some((surface) => surface.contains(element))));
   const painted = () => new Promise<void>((resolve) => win.requestAnimationFrame(() => win.requestAnimationFrame(() => resolve())));
@@ -361,6 +465,20 @@ export const createRuntime = async (
     );
     return manualSuspensions.size > 0 || presentedOverlayOpen;
   };
+  const binding = (candidate: Candidate) => ({
+    sources: candidateSources(candidate).map((source) => {
+      const contexts: number[] = [bindingId(source)];
+      for (let parent: HTMLElement | null = source; parent; parent = parent.parentElement)
+        if (parent.matches('ion-modal, .ion-page')) contexts.push(bindingId(parent));
+      return contexts;
+    }),
+    scroll: candidate.scrollElement
+      ? [
+          bindingId(candidate.scrollElement),
+          candidate.scrollElement.isConnected && Array.from(extensionAncestors(candidate.element)).includes(candidate.scrollElement),
+        ]
+      : undefined,
+  });
   // Compare source data before PNG rendering mutates each item's payload.
   const signature = (candidate: Candidate, includeTransitionIds = true) => {
     const modal = candidate.element.closest('ion-modal');
@@ -371,7 +489,7 @@ export const createRuntime = async (
       ? { ...candidate.control, x: 0, y: 0, items: candidate.control.items.map((item) => ({ ...item, x: 0, y: 0 })) }
       : candidate.control;
     return JSON.stringify(
-      { control, icons: candidate.icons.map(({ source }) => source), assets: candidate.assets?.signature },
+      { control, binding: binding(candidate), icons: candidate.icons.map(({ source }) => source), assets: candidate.assets?.signature },
       (key, value) => {
         if (!includeTransitionIds && key === 'transitionId') return undefined;
         // Translated DOMRects contain floating-point noise even when the control
@@ -380,23 +498,38 @@ export const createRuntime = async (
       },
     );
   };
-  // Images replace native pixels, not native ownership. Navigation also retains
-  // its sources across transient candidacy gaps until the single commit transfer.
-  const holdSource = (element: HTMLElement) => {
-    if (!element.isConnected) return false;
+  // Native source ownership outlives pixel handoffs and deferred reads.
+  // Suspension carries its explicit source lease, independent of playback state.
+  const unselectedNativeReleaseReason = (element: HTMLElement): NativeReleaseReason | undefined => {
+    const input = nativeOwners.get(element)?.input;
+    // Ended contexts, explicit Web requests and confirmed failures override every temporary hold.
+    if (!sourceContextActive(element) || (input && !sourceContextActive(input.element))) return 'context-ended';
+    if (element.closest(`.${rejectedClass}`)) return 'rejected';
+    if (!nativeProjectionAllowed(element) || (input && (!input.element.matches(discovery) || !nativeProjectionAllowed(input.element))))
+      return 'unavailable';
+    if (manualSuspensions.size && ![...manualSuspensions.values()].every(Boolean)) return 'requested';
+    for (const [scopes, retained] of suspended)
+      if (scopes.some((scope) => scope.contains(element)) && !retained.has(element)) return 'requested';
+    const read = sourceReads.get(input?.element ?? element);
+    if (read === 'unavailable') return 'unavailable';
+
+    // Images and transition playback change presentation, not the accepted Native owner.
+    if (projectionState.hasImageHandoff(element)) return;
+    if ([...suspended.values()].some((retained) => retained.has(element))) return;
     const page = element.closest<HTMLElement>('.ion-page');
-    return (
-      projectionState.owns(element) ||
-      projectionState.isVisible(element) ||
-      (!manualSuspensions.size && !!page && (tabActivationPages.has(page) || (tabSwitchHandoff && pages.has(page)))) ||
-      (!!navigation.current && navigation.current.phase !== 'committing' && isVerticalBarsSource(element) && navigation.owns(element))
-    );
+    if (!manualSuspensions.size && page && (tabActivationPages.has(page) || (tabSwitchHandoff && pages.has(page)))) return;
+    if (navigation.current && navigation.current.phase !== 'committing' && navigation.owns(element)) return;
+    // Outside an image/transition hold, authored hiding ends current eligibility.
+    // Skipped, deferred and image-suppressed reads cannot establish that verdict.
+    return read === 'ready' || read === 'hidden' ? 'unavailable' : undefined;
   };
-  const readSources = (): Candidate[] => {
-    // Ionic owns closing motion; the native image keeps ownership until DidDismiss
-    // instead of repeatedly projecting the moving modal controls.
-    const modal = topModal(doc);
-    if (modal && modalDismissing(modal)) return [];
+  const retainsUnselectedNativeSource = (element: HTMLElement) => unselectedNativeReleaseReason(element) === undefined;
+  const releaseUnselectedSource = (element: HTMLElement, instant = false) => {
+    const reason = unselectedNativeReleaseReason(element);
+    if (reason) releaseNativeOwner(element, reason, instant);
+  };
+  const readSources = (reuseDeferred = true): Candidate[] => {
+    sourceReads.clear();
     if (verticalGesture && (overlayOpen(true, true) || !verticalGesture.scopes.every(inVerticalBarsSurface))) verticalGesture = undefined;
     search.keepSearchTabsVisible();
     for (const page of pages) if (!page.isConnected) pages.delete(page);
@@ -416,10 +549,10 @@ export const createRuntime = async (
     const readable = (element: HTMLElement) =>
       inVerticalBarsSurface(element) &&
       !(topModal(doc) && modalPreparing(topModal(doc)!)) &&
-      !verticalBarsPages.isDeparted(element, true) &&
+      !pageProjection.isDeparted(element, true) &&
       (!blocked(element) || (overlayVisible && isVerticalBarsSource(element)));
     const measurableSources = new Set([
-      ...sources.keys(),
+      ...nativeOwners.keys(),
       ...Array.from(scope.querySelectorAll<HTMLElement>('[data-native-ui-snapshot-source]')),
       ...Array.from(scope.querySelectorAll<HTMLElement>(`[${marker}], [data-native-ui-web-source]`)).filter(isVerticalBarsSource),
     ]);
@@ -430,7 +563,7 @@ export const createRuntime = async (
             .decorate(
               Array.from(scope.querySelectorAll<HTMLElement>(discovery))
                 .filter(readable)
-                .map(readEnabledCandidate)
+                .map((element) => (reuseDeferred ? readSnapshotSource(element) : readEnabledCandidate(element)))
                 .filter((candidate): candidate is Candidate => !!candidate),
               blocked,
             )
@@ -464,7 +597,7 @@ export const createRuntime = async (
     assignToolbarTransitionIds(result);
     return navigation.retain(result);
   };
-  const read = (): Candidate[] => tabWidths.measure(readSources);
+  const read = (reuseDeferred = true): Candidate[] => tabWidths.measure(() => readSources(reuseDeferred));
   const scrollChanged = (event: Event) => {
     const target = event.composedPath()[0];
     if (options.nativeScroll && target instanceof HTMLElement) scrollBindings.changed(target);
@@ -603,9 +736,6 @@ export const createRuntime = async (
       // deferred retirement still runs instantly after the overlay releases.
       if (updateQueue.waiting || (retentions.size && !manualSuspensions.size)) return;
       const enteringModal = topModal(doc);
-      // Geometry refreshes continue for the Web rail during the Ionic animation.
-      // Once native has acknowledged retirement, they must not publish it again.
-      if (enteringModal && modalDismissing(enteringModal) && renderedSnapshot?.controls.length === 0) return;
       if (enteringModal && modalPresentation(enteringModal)?.animation.id === playingModalAnimation && playingModalAnimation !== undefined)
         return;
       modalHandoff = false;
@@ -616,7 +746,7 @@ export const createRuntime = async (
         const retained = acknowledged.filter(
           (candidate) =>
             candidate.element.isConnected &&
-            !verticalBarsPages.isDeparted(candidate.element, true) &&
+            !pageProjection.isDeparted(candidate.element, true) &&
             !candidate.element.closest('.ion-page-hidden') &&
             !Array.from(tabActivationPages.keys()).some((page) => page.contains(candidate.element)),
         );
@@ -626,7 +756,7 @@ export const createRuntime = async (
               (candidate) =>
                 candidate.control.search?.available &&
                 candidateSources(candidate).some(
-                  (source) => !source.isConnected || verticalBarsPages.isDeparted(source, true) || !!source.closest('.ion-page-hidden'),
+                  (source) => !source.isConnected || pageProjection.isDeparted(source, true) || !!source.closest('.ion-page-hidden'),
                 ),
             )
             .map((candidate) => candidate.control.id),
@@ -645,7 +775,7 @@ export const createRuntime = async (
             candidate.actions.delete(configuration.closeId);
           }
           const retainedSources = new Set(retained.flatMap(candidateSources));
-          for (const element of sources.keys()) if (!retainedSources.has(element) && !holdSource(element)) restore(element, true);
+          for (const element of nativeOwners.keys()) if (!retainedSources.has(element)) releaseUnselectedSource(element, true);
           const retirement: NativeUISnapshot = {
             ...renderedSnapshot,
             revision: ++revision,
@@ -664,7 +794,7 @@ export const createRuntime = async (
           scrollBindings.acknowledge(acknowledged, retirement.viewportWidth);
           for (const candidate of retained) {
             if (acknowledged.includes(candidate)) continue;
-            candidateSources(candidate).forEach((source) => restore(source, true));
+            candidateSources(candidate).forEach((source) => releaseNativeOwner(source, 'rejected', true));
             if (candidate.scrollElement) nativeScrollOwners.delete(candidate.scrollElement);
             schedule();
           }
@@ -688,6 +818,15 @@ export const createRuntime = async (
       }
       observe();
       let candidates = read();
+      const bindings = new Map(
+        candidates.map((candidate) => [
+          candidate,
+          {
+            surface: candidate.element.closest('ion-modal') ?? undefined,
+            binding: JSON.stringify(binding(candidate)),
+          },
+        ]),
+      );
       const signatures = new Map(candidates.map((candidate) => [candidate.element, signature(candidate)]));
       const rejectionSignatures = new Map(candidates.map((candidate) => [candidate.element, signature(candidate, false)]));
       const failedAssets = new Set<Candidate>();
@@ -718,7 +857,7 @@ export const createRuntime = async (
       candidates = candidates.filter((candidate) => !failedAssets.has(candidate));
       if (stopped || updateQueue.dirty || (retentions.size && !manualSuspensions.size)) return;
       const retained = new Set([...candidates.flatMap(candidateSources), ...(verticalGesture?.sources ?? [])]);
-      const removed = Array.from(sources.keys()).filter((element) => !retained.has(element));
+      const removed = Array.from(nativeOwners.keys()).filter((element) => !retained.has(element));
       if (removed.some(isVerticalBarsSource)) {
         actions.forEach(forgetVerticalBarFrame);
         try {
@@ -755,11 +894,13 @@ export const createRuntime = async (
       }
       const committingNavigation = navigation.current?.phase === 'committing';
       const preparingNavigation = navigation.current?.leased && navigation.current.phase === 'playing';
-      const returningToWeb = removed.filter((element) => !holdSource(element) && (!committingNavigation || !navigation.owns(element)));
+      const returningToWeb = removed.filter(
+        (element) => !retainsUnselectedNativeSource(element) && (!committingNavigation || !navigation.owns(element)),
+      );
       if (returningToWeb.length) {
         // Restore the source and let WebKit paint before removing its native cover.
-        returningToWeb.forEach((element) => restore(element, preparingNavigation));
-        if (removed.some((element) => isVerticalBarsSource(element) && !holdSource(element)))
+        returningToWeb.forEach((element) => releaseUnselectedSource(element, preparingNavigation));
+        if (removed.some((element) => isVerticalBarsSource(element) && !retainsUnselectedNativeSource(element)))
           win.dispatchEvent(new CustomEvent('nativeUIVerticalBarsRelease', { detail: { instant: handoffInstant } }));
         // The outgoing tab is no longer visible, so waiting two frames only leaves its
         // native snapshot over the destination. Stack transitions still need the paint.
@@ -779,10 +920,7 @@ export const createRuntime = async (
               : 'right'
             : undefined;
       const modal = topModal(doc);
-      const verticalBarFrame =
-        modal && !(imagesFor() && movingModal(doc)) && !modalPreparing(modal) && !modalDismissing(modal) && modalUsesVerticalBars(modal)
-          ? modalVerticalBarFrame(modal)
-          : undefined;
+      const verticalBarFrame = modal && !modalPreparing(modal) && modalUsesVerticalBars(modal) ? modalVerticalBarFrame(modal) : undefined;
       const transition = navigation.current;
       const railCandidates = candidates.filter((candidate) => candidate.control.placement === 'vertical-bars');
       const activePage = railCandidates.length
@@ -793,7 +931,7 @@ export const createRuntime = async (
               const invisible = page.closest<HTMLElement>('.ion-page-invisible');
               return (
                 !page.closest('.ion-page-hidden, ion-menu') &&
-                !verticalBarsPages.isDeparted(page) &&
+                !pageProjection.isDeparted(page) &&
                 (modal || !page.closest('ion-modal, ion-popover')) &&
                 (!invisible || pages.has(invisible))
               );
@@ -817,7 +955,7 @@ export const createRuntime = async (
         verticalBarEdge,
         controls: candidates.map((candidate) => candidate.control),
       };
-      const serialized = JSON.stringify(data);
+      const serialized = JSON.stringify([data, candidates.map(binding)]);
       if (serialized === lastSnapshot && !forceRefresh) {
         search.settle((element) => Array.from(pages).some((page) => page.contains(element)));
         return;
@@ -873,7 +1011,7 @@ export const createRuntime = async (
           // a failed fresh acquisition is cached normally to stop repeated retries.
           if (!snapshot.controls.find((control) => control.id === candidate.control.id)?.scroll?.reuse)
             rejected.set(candidate.element, rejectionSignatures.get(candidate.element)!);
-          else candidateSources(candidate).forEach((source) => restore(source, true));
+          else candidateSources(candidate).forEach((source) => releaseNativeOwner(source, 'rejected', true));
           setRejected(candidate.element, true);
           schedule();
         }
@@ -888,16 +1026,12 @@ export const createRuntime = async (
         (candidate) =>
           !result.rejectedControls?.includes(candidate.control.id) &&
           current.get(candidate.element) === signatures.get(candidate.element) &&
+          bindings.get(candidate)?.binding === JSON.stringify(binding(candidate)) &&
           (!candidate.scrollElement || !unconfirmedScroll.has(candidate.scrollElement)),
       );
       accepted.forEach((candidate) => setRejected(candidate.element, false));
-      const acceptedVerticalBarsOwners = new Set(
+      const acceptedRailElements = new Set(
         accepted.filter((candidate) => candidate.control.placement === 'vertical-bars').map((candidate) => candidate.element),
-      );
-      const acceptedVerticalBarsMembers = new Set(
-        accepted
-          .filter((candidate) => candidate.control.placement === 'vertical-bars')
-          .flatMap((candidate) => Array.from(candidate.actions.values())),
       );
       const invalidated = candidates.length !== accepted.length;
       renderedSnapshot = snapshot;
@@ -908,28 +1042,37 @@ export const createRuntime = async (
       );
       // Keep an existing cover while its content catches up. Only an ineligible
       // source needs to return to Web; new sources still require an exact ack.
-      for (const element of sources.keys())
-        if (!currentSources.has(element) && !holdSource(element)) restore(element, committingNavigation && navigation.owns(element));
+      for (const element of nativeOwners.keys())
+        if (!currentSources.has(element)) releaseUnselectedSource(element, committingNavigation && navigation.owns(element));
+      // Markers describe the acquired inputs, including leases retained across
+      // an outdated acknowledgement. An unconfirmed batch is not a Web transfer.
+      const acquiredInputs = new Map([...nativeOwners].map(([source, owner]) => [source, owner.input]));
+      for (const candidate of accepted) for (const source of candidateSources(candidate)) acquiredInputs.set(source, candidate);
+      const ownedRailInputs = [...acquiredInputs].filter(([, input]) => input.control.placement === 'vertical-bars');
+      const nextVerticalBarsOwners = new Set(ownedRailInputs.map(([, input]) => input.element));
+      const nextVerticalBarsMembers = new Set(
+        ownedRailInputs.flatMap(([source, input]) => [...input.actions.values()].filter((action) => source.contains(action))),
+      );
       for (const element of verticalBarsOwners) {
-        if (acceptedVerticalBarsOwners.has(element) || holdSource(element)) continue;
+        if (nextVerticalBarsOwners.has(element)) continue;
         element.removeAttribute(verticalBarsMarker);
         verticalBarsOwners.delete(element);
       }
-      for (const element of acceptedVerticalBarsOwners) {
-        element.setAttribute(verticalBarsMarker, '');
+      for (const element of nextVerticalBarsOwners) {
+        if (!element.hasAttribute(verticalBarsMarker)) element.setAttribute(verticalBarsMarker, '');
         verticalBarsOwners.add(element);
       }
       for (const element of verticalBarsMembers) {
-        if (acceptedVerticalBarsMembers.has(element) || holdSource(element)) continue;
+        if (nextVerticalBarsMembers.has(element)) continue;
         element.removeAttribute(verticalBarsMemberMarker);
         verticalBarsMembers.delete(element);
       }
-      for (const element of acceptedVerticalBarsMembers) {
-        element.setAttribute(verticalBarsMemberMarker, '');
+      for (const element of nextVerticalBarsMembers) {
+        if (!element.hasAttribute(verticalBarsMemberMarker)) element.setAttribute(verticalBarsMemberMarker, '');
         verticalBarsMembers.add(element);
       }
       acquiringSources = new Set(accepted.flatMap(candidateSources));
-      if (acceptedVerticalBarsOwners.size)
+      if (acceptedRailElements.size)
         win.dispatchEvent(new CustomEvent('nativeUIVerticalBarsAcquire', { detail: { instant: handoffInstant } }));
       for (const candidate of accepted) {
         const width = result.tabBarWidths?.[candidate.control.id];
@@ -937,12 +1080,20 @@ export const createRuntime = async (
           tabWidths.apply(candidate.element, width);
         const instant =
           handoffInstant ||
-          candidateSources(candidate).some(projectionState.isVisible) ||
+          candidateSources(candidate).some(projectionState.imageVisible) ||
           (committingNavigation && horizontalToolbar(candidate));
         for (const element of candidateSources(candidate)) {
-          const newlyProjected = !sources.has(element) || !element.hasAttribute(marker);
-          if (!sources.has(element)) {
-            sources.set(element, element.getAttribute('aria-hidden'));
+          const newlyProjected = !nativeOwners.has(element) || !element.hasAttribute(marker);
+          const previous = nativeOwners.get(element);
+          const acceptedBinding = bindings.get(candidate)!;
+          const { surface } = acceptedBinding;
+          if (previous && previous.surface !== surface) imagesFor(previous.surface)?.invalidate();
+          nativeOwners.set(element, {
+            previousAriaHidden: previous ? previous.previousAriaHidden : element.getAttribute('aria-hidden'),
+            input: candidate,
+            ...acceptedBinding,
+          });
+          if (!previous) {
             crossfade.play(element, true, instant || (isVerticalBarsSource(element) && !element.matches('ion-tab-bar')));
           }
           element.setAttribute(marker, '');
@@ -964,7 +1115,7 @@ export const createRuntime = async (
         (candidate) =>
           !result.rejectedControls?.includes(candidate.control.id) &&
           (!candidate.scrollElement || !unconfirmedScroll.has(candidate.scrollElement)) &&
-          candidateSources(candidate).some((source) => sources.has(source)),
+          candidateSources(candidate).some((source) => nativeOwners.has(source)),
       );
       scrollBindings.acknowledge(acknowledged, snapshot.viewportWidth);
       const discovered = Array.from(scope.querySelectorAll<HTMLElement>(discovery));
@@ -1007,7 +1158,7 @@ export const createRuntime = async (
       // Geometry belongs to the outgoing tab visual, not to other rail owners.
       // Keep it until that visual has completely faded back to native.
       for (const [tabBar, restore] of tabGeometry) {
-        if (!tabBar.isConnected || acceptedVerticalBarsOwners.has(tabBar)) {
+        if (!tabBar.isConnected || acceptedRailElements.has(tabBar)) {
           restore();
           tabGeometry.delete(tabBar);
         }
@@ -1064,7 +1215,7 @@ export const createRuntime = async (
           !(record.attributeName === 'style' && measuringPointerPages.has(record.target as HTMLElement)) &&
           !(
             record.attributeName === 'aria-hidden' &&
-            sources.has(record.target as HTMLElement) &&
+            nativeOwners.has(record.target as HTMLElement) &&
             (record.target as Element).getAttribute('aria-hidden') === 'true'
           ),
       )
@@ -1095,7 +1246,7 @@ export const createRuntime = async (
       const withinPage = (element: HTMLElement) => page.contains(element) || element.contains(page);
       const candidates = navigation.measure(
         () =>
-          unprojected(Array.from(sources.keys()).filter(withinPage), () =>
+          unprojected(Array.from(nativeOwners.keys()).filter(withinPage), () =>
             // Only fixed toolbar controls participate in this handoff. Avoid measuring
             // content controls that will be discarded by horizontalToolbar below.
             Array.from(page.querySelectorAll<HTMLElement>(discovery))
@@ -1137,7 +1288,7 @@ export const createRuntime = async (
     // Popover content has Ionic page lifecycle too; it is not a page navigation.
     if (page.closest('ion-popover')) return;
     if (!page.closest('ion-modal')) imagesFor()?.invalidate();
-    verticalBarsPages.lifecycle(event);
+    pageProjection.lifecycle(event);
     tabActivationPages.delete(page);
     getNativeSearchBindings(doc)
       .filter((binding) => page.contains(binding.footer))
@@ -1159,7 +1310,7 @@ export const createRuntime = async (
   const pageDid: EventListener = (event) => {
     const page = event.target as HTMLElement;
     if (page.closest('ion-popover')) return;
-    verticalBarsPages.lifecycle(event);
+    pageProjection.lifecycle(event);
     tabActivationPages.delete(page);
     pages.delete(page);
     if (navigation.current && !navigation.current.leased && pages.size === 0) finishNavigation();
@@ -1231,7 +1382,7 @@ export const createRuntime = async (
   on(doc, VERTICAL_BARS_TRANSITION_CANCELED, (event) => {
     const leaving = event.target as HTMLElement;
     const entering = (event as CustomEvent<{ entering?: HTMLElement }>).detail?.entering;
-    verticalBarsPages.cancel(entering, leaving);
+    pageProjection.cancel(entering, leaving);
     pages.delete(leaving);
     if (entering) pages.delete(entering);
     if (!navigation.current?.leased) finishNavigation();
@@ -1287,7 +1438,8 @@ export const createRuntime = async (
         imagesFor(coveredSurface(modal))?.invalidate();
     }
     if (phase === 'willDismiss' && element.matches('ion-modal')) {
-      projectionSurfaces.get(element as HTMLIonModalElement)?.begin();
+      // The common presentation policy requests images for this interaction-locked
+      // transition. Source ownership ends only at DidDismiss.
       modalHandoff = true;
       if (updateQueue.running) handoffInstant = true;
       schedule();
@@ -1298,6 +1450,9 @@ export const createRuntime = async (
         modalHandoff = true;
         if (updateQueue.running) handoffInstant = true;
         const modal = element as HTMLIonModalElement;
+        // Dismissal completes the source context, unlike its presentation/drag phases.
+        for (const source of nativeOwners.keys())
+          if (source.closest('ion-modal') === modal) releaseNativeOwner(source, 'context-ended', true);
         void projectionSurfaces.delete(modal);
       }
       projectionSurfaces.end();
@@ -1335,7 +1490,10 @@ export const createRuntime = async (
   on(win, 'scrollend', scrollSettled);
   on(win.matchMedia('(prefers-color-scheme: dark)'), 'change');
   on(win, 'nativeUIRefresh', (event) => {
-    if (imagesFor() && (event as CustomEvent<{ modalMotion?: boolean }>).detail?.modalMotion) return;
+    if (imagesFor() && (event as CustomEvent<{ modalMotion?: boolean }>).detail?.modalMotion) {
+      const modal = followingModal(doc);
+      if (!modal || imagesFor(modal)?.owners.length) return;
+    }
     if (nativeVerticalBars()) search.prepare();
     if ((event as Event & { retireSearch?: boolean }).retireSearch)
       getNativeSearchBindings(doc).forEach((binding) => search.retire(binding));
@@ -1361,8 +1519,8 @@ export const createRuntime = async (
     },
     markForCheck: schedule,
     getStatus: (): NativeUIStatus => ({
-      state: stopped ? 'stopped' : sources.size ? 'native' : 'web',
-      projected: sources.size,
+      state: stopped ? 'stopped' : nativeOwners.size ? 'native' : 'web',
+      projected: nativeOwners.size,
       updates,
       reason,
     }),
@@ -1414,7 +1572,7 @@ export const createRuntime = async (
         search.destroy();
         crossfade.destroy();
         await projectionSurfaces.destroy();
-        restoreAll();
+        releaseNativeOwners();
         unregisterNativeOwner();
         unregisterTransitionActive();
         if (!doc.hidden) await painted();
@@ -1447,7 +1605,7 @@ export const createRuntime = async (
     if (stopped || doc.hidden || event.revision < acceptedRevision || event.revision > revision || event.sequence <= lastSequence)
       return false;
     const element = actions.get(event.id);
-    const owner = element && Array.from(sources.keys()).find((source) => source === element || source.contains(element));
+    const owner = element && Array.from(nativeOwners.keys()).find((source) => source === element || source.contains(element));
     const ignored = owner && isVerticalBarsSource(owner) ? (retentions.size ? 'ion-toast, ion-picker' : railPreservingOverlays) : undefined;
     if (overlayOpen(false, true, ignored)) {
       if (!manualSuspensions.size) {
@@ -1469,8 +1627,9 @@ export const createRuntime = async (
     lastSequence = event.sequence;
     if (!element || (verticalGesture && owner && isVerticalBarsSource(owner))) return false;
     if (!owner || !inVerticalBarsSurface(owner)) return false;
-    const direct = !blocked(owner) && unprojected(sources.keys(), () => readEnabledCandidate(owner));
-    const candidate = direct || read().find((candidate) => candidate.actions.has(event.id));
+    const direct = !blocked(owner) && unprojected(nativeOwners.keys(), () => readEnabledCandidate(owner));
+    // Retained pixels are not permission to dispatch an action from stale input.
+    const candidate = direct || read(false).find((candidate) => candidate.actions.has(event.id));
     // Only retained horizontal controls are locked during navigation. Vertical
     // Bars and other toolbar controls keep their existing activation lifecycle.
     if (candidate && horizontalToolbar(candidate) && navigation.owns(element)) return false;
@@ -1546,14 +1705,18 @@ export const createRuntime = async (
                 topModal(doc) !== modal ||
                 modalPreparing(modal) ||
                 !!modalPresentation(modal) ||
-                movingModal(doc) === modal ||
+                modalRequestedPixels(modal) === 'image' ||
                 !!navigation.current ||
                 stopped ||
                 overlayOpen(true, true),
             }),
           );
           if (surface && !modalStack(doc).includes(modal)) await projectionSurfaces.delete(modal);
-          else if (surface) schedule();
+          else if (surface) {
+            // Creation can finish after the policy event; apply the current request.
+            if (modalRequestedPixels(modal) === 'image') surface.begin();
+            schedule();
+          }
         } catch {
           // This surface keeps the existing Web fallback if the optional listener fails.
         }
@@ -1564,14 +1727,20 @@ export const createRuntime = async (
       });
       await Promise.all(modalStack(doc).map(prepareSurface));
       on(win, modalMotionEvent, (event) => {
-        const { modal, moving } = (event as CustomEvent<{ modal: HTMLIonModalElement; moving: boolean }>).detail;
+        const { modal, requestedPixels } = (event as CustomEvent<{ modal: HTMLIonModalElement; requestedPixels: 'native' | 'image' }>)
+          .detail;
         const surface = projectionSurfaces.get(modal);
-        if (moving) surface?.begin();
-        else if (!modalDismissing(modal)) {
-          lastSnapshot = '';
+        if (requestedPixels === 'image') {
+          surface?.begin();
+          schedule();
+        } else {
+          const imageOwned = !!surface?.owners.length;
           surface?.end();
+          if (imageOwned) {
+            lastSnapshot = '';
+            schedule();
+          }
         }
-        schedule();
       });
     } catch {
       /* Optional capability: older/mismatched Web bundles keep the existing fallback. */
@@ -1688,7 +1857,16 @@ export const createRuntime = async (
         getNativeSearchBindings(doc)
           .filter((binding) => scopes.some((scope) => scope.contains(binding.footer) || scope.contains(binding.tabBar)))
           .forEach((binding) => search.retire(binding));
-        suspended.add(scopes);
+        const retained = new Set(
+          suspensionOptions?.navigation
+            ? [
+                ...acknowledged.filter((candidate) => horizontalToolbar(candidate) || candidate.control.placement === 'vertical-bars'),
+                ...(transition?.frozen ?? []),
+                ...(transition?.destination ?? []),
+              ].flatMap(candidateSources)
+            : [],
+        );
+        suspended.set(scopes, retained);
         await flush(transition);
         // Moving content has returned to Web; fixed toolbar covers remain native for navigation.
         await new Promise<void>((resolve) => win.requestAnimationFrame(() => resolve()));
@@ -1700,7 +1878,7 @@ export const createRuntime = async (
           if (canceled || !scopes.some((scope) => scope.closest('ion-app.ios-theme-vertical-bars'))) {
             scopes.forEach((scope) => pages.delete(scope)); // Preserve ordinary iPhone handoff; cancellation has no DidLeave.
             if (canceled) {
-              verticalBarsPages.cancel(scopes[0], scopes[1]); // The entering page is abandoned; the leaving page stays active.
+              pageProjection.cancel(scopes[0], scopes[1]); // The entering page is abandoned; the leaving page stays active.
             }
           }
           if (transition) finishNavigation(transition);

@@ -40,7 +40,9 @@ test('disabling Ionic discovery leaves an otherwise eligible verticalBars back b
   await nextFrame();
   expect(enabled.getStatus().projected).toBe(1);
   expect(document.querySelector('.ios-theme-vertical-bars-back-button-projection')).not.toBeNull();
+  const source = document.querySelector<HTMLElement>('ion-back-button')!;
   await enabled.destroy();
+  expect(projectionState.getTarget(source)).toBeUndefined();
 
   mountEligibleBackButton();
   const handle = createVerticalBarsWebProjection(document, { ionic: { auto: false } });
@@ -266,6 +268,7 @@ test.each([false, true])('modal image targets survive dismissal before/after cov
     Object.defineProperty(wrapper, 'offsetWidth', { value: window.innerWidth });
     wrapper.getAnimations = () => [];
     modal.attachShadow({ mode: 'open' }).append(wrapper);
+    modal.style.setProperty('--ios-theme-vertical-bars-modal-toolbar-top', '32px');
     app.append(modal);
     const close = modal.querySelector<HTMLElement>('ion-button')!;
     close.style.display = 'block';
@@ -285,6 +288,7 @@ test.each([false, true])('modal image targets survive dismissal before/after cov
     expect(outgoing.isConnected).toBe(true);
     expect(outgoing.inert).toBe(true);
     expect(outgoing.hasAttribute('aria-hidden')).toBe(false);
+    expect(outgoing.assignedSlot?.parentNode).toBe(wrapper);
     preparedOwners.delete(close);
     owners.add(close);
     if (visible) visibleOwners.add(close);
@@ -355,8 +359,10 @@ test('native acquisition updates existing image targets without measuring or cre
 test.each([
   { surface: 'page', grouped: true },
   { surface: 'modal', grouped: true },
+  { surface: 'modal', grouped: false },
   { surface: 'page', grouped: false },
   { surface: 'page', grouped: true, partial: true },
+  { surface: 'modal', grouped: true, partial: true },
 ])(
   'native $surface actions (grouped=$grouped) have hidden image targets before the first capture',
   async ({ surface, grouped, partial }) => {
@@ -371,7 +377,10 @@ test.each([
     wrapper.setAttribute('part', 'content');
     Object.defineProperty(wrapper, 'offsetWidth', { value: innerWidth });
     wrapper.getAnimations = () => [];
+    wrapper.innerHTML = '<slot></slot>';
+    wrapper.style.transform = 'translateY(100px)';
     modal?.attachShadow({ mode: 'open' }).append(wrapper);
+    modal?.style.setProperty('--ios-theme-vertical-bars-modal-toolbar-top', '32px');
     const group = document.querySelector<HTMLElement>('ion-buttons')!;
     const actions = Array.from(group.querySelectorAll<HTMLElement>('ion-button'));
     for (const element of [group, ...actions]) {
@@ -409,6 +418,15 @@ test.each([
       const target = projectionState.getTarget(group)!;
       expect(target?.isConnected).toBe(true);
       expect(target.hasAttribute('data-native-ui-proxy-prepared')).toBe(true);
+      if (modal) {
+        expect(target.closest('ion-modal')).toBe(modal);
+        expect(target.assignedSlot?.parentNode).toBe(wrapper);
+        expect(wrapper.contains(target.assignedSlot)).toBe(true);
+        actions[0].setAttribute('aria-label', 'Updated close');
+        await nextFrame();
+        expect(projectionState.getTarget(group)).toBe(target);
+        expect(target.assignedSlot?.parentNode).toBe(wrapper);
+      }
       for (const source of actions) expect(projectionState.getTarget(source)?.isConnected).toBe(true);
       expect(projectionState.getTarget(actions[0])).not.toBe(projectionState.getTarget(actions[1]));
       // Native may release a source before its prepared proxy is retired.
@@ -419,6 +437,8 @@ test.each([
       actions[0].removeAttribute('aria-hidden');
     } finally {
       await handle.destroy();
+      for (const source of [group, ...actions]) expect(projectionState.getTarget(source)).toBeUndefined();
+      expect(modal?.shadowRoot?.querySelector('slot[data-native-ui-projection-node]')).toBeFalsy();
       expect(actions[0].hasAttribute('aria-hidden')).toBe(false);
       expect(actions[1].hasAttribute('data-native-ui-projected')).toBe(!grouped || !!partial);
       stop();
@@ -452,4 +472,17 @@ test('tab width measurement does not refresh the Web rail, but source changes st
     widths.clear();
     document.body.replaceChildren();
   }
+});
+
+test('destroy does not remove a target registered by another renderer', async () => {
+  mountEligibleBackButton();
+  const source = document.querySelector<HTMLElement>('ion-back-button')!;
+  const handle = createVerticalBarsWebProjection(document, {});
+  await nextFrame();
+  expect(projectionState.getTarget(source)?.isConnected).toBe(true);
+  const replacement = document.createElement('ion-back-button');
+  projectionState.setTarget(source, replacement);
+  await handle.destroy();
+  expect(projectionState.getTarget(source)).toBe(replacement);
+  projectionState.deleteTarget(source);
 });

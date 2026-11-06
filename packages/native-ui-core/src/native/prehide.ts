@@ -6,7 +6,7 @@ import { VERTICAL_BARS_TRANSITION_CANCELED } from '../native-integration/index.j
 import {
   childElements,
   clearVerticalBarsPlacement,
-  createVerticalBarsPageState,
+  createPageProjectionState,
   verticalBarsActionCandidate,
   verticalBarsBackCandidate,
   verticalBarsBackWebClass,
@@ -53,7 +53,7 @@ export const prehideVerticalBarsToolbarSources = (
   const scopes = new Map<HTMLElement, Set<HTMLElement>>();
   const owner = new WeakMap<HTMLElement, HTMLElement>();
   const pendingBacks = new Map<HTMLElement, { scope: HTMLElement; timer: ReturnType<typeof setTimeout> }>();
-  const verticalBarsPages = createVerticalBarsPageState();
+  const pageProjection = createPageProjectionState();
   const listeners = new AbortController();
   const root = () =>
     sourceRoot.closest<HTMLElement>('ion-app.ios-theme-vertical-bars') ??
@@ -79,7 +79,7 @@ export const prehideVerticalBarsToolbarSources = (
     scopes.delete(scope);
   };
   const capture = (scope: HTMLElement) => {
-    if (!root()?.contains(scope) || scope.closest(overlays) || !modalUsesVerticalBars(scope) || verticalBarsPages.isDeparted(scope)) return;
+    if (!root()?.contains(scope) || scope.closest(overlays) || !modalUsesVerticalBars(scope) || pageProjection.isDeparted(scope)) return;
     const owned = scopes.get(scope) ?? new Set<HTMLElement>();
     const place = (element: HTMLElement, rail: boolean) => {
       if (owned.has(element)) return;
@@ -197,14 +197,14 @@ export const prehideVerticalBarsToolbarSources = (
   const onWillEnter = (event: Event) => {
     const page = asElement(event.target);
     if (page?.matches('.ion-page')) {
-      verticalBarsPages.lifecycle(event);
+      pageProjection.lifecycle(event);
       release(page); // Cached pages begin a new placement epoch.
       capture(page);
       reconcile();
     }
   };
   const onPageLifecycle: EventListener = (event) => {
-    verticalBarsPages.lifecycle(event);
+    pageProjection.lifecycle(event);
     if (event.type !== LIFECYCLE_DID_LEAVE) return;
     const page = asElement(event.target);
     if (page) release(page);
@@ -214,7 +214,7 @@ export const prehideVerticalBarsToolbarSources = (
     const leaving = asElement(event.target);
     if (!leaving) return;
     const entering = (event as CustomEvent<{ entering?: HTMLElement }>).detail?.entering;
-    verticalBarsPages.cancel(entering, leaving);
+    pageProjection.cancel(entering, leaving);
     reconcile();
   };
   doc.addEventListener(LIFECYCLE_WILL_ENTER, onWillEnter, { capture: true, signal: listeners.signal });

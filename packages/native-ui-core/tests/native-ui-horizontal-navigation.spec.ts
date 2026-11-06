@@ -147,6 +147,7 @@ test('navigation retains the acknowledged native toolbar without exposing either
   ack();
   await vi.waitFor(() => expect(next.hasAttribute('data-native-ui-projected')).toBe(true));
   expect(next.hasAttribute('data-native-ui-navigation-source')).toBe(false);
+  expect(old.hasAttribute('data-native-ui-projected')).toBe(false);
   expect(f.snapshots.at(-1)?.transitionDuration).toBe(0);
   const after = f.snapshots.at(-1)!;
   f.listeners.get('activate')!({ id: after.controls[0].items[0].id, revision: after.revision, sequence: 2 });
@@ -286,7 +287,7 @@ test('a DOM mutation during acknowledgement does not discard the still-visible t
 });
 
 test.each(['Modal', 'Popover', 'Alert', 'ActionSheet'])(
-  '%s interrupts a retained toolbar and restores the destination after dismissal',
+  '%s suppresses navigation pixels without releasing its Native owner',
   async (name) => {
     const f = await fixture();
     const release = await f.start();
@@ -295,7 +296,7 @@ test.each(['Modal', 'Popover', 'Alert', 'ActionSheet'])(
     overlay.dispatchEvent(new CustomEvent(`ion${name}WillPresent`, { bubbles: true }));
     await vi.waitFor(() => expect(f.snapshots.at(-1)?.controls).toEqual([]));
     expect(document.querySelector('[data-native-ui-navigation-source]')).toBeNull();
-    expect(document.querySelector('[data-native-ui-projected]')).toBeNull();
+    expect(f.leaving.querySelector('button')!.hasAttribute('data-native-ui-projected')).toBe(true);
     release();
     overlay.dispatchEvent(new CustomEvent(`ion${name}DidDismiss`, { bubbles: true }));
     overlay.remove();
@@ -928,7 +929,7 @@ test('a successful synchronization restores the single retry allowance', async (
   }
 });
 
-test('a dismissing modal retires once and never reacquires while its frame moves', async () => {
+test('a dismissing modal without image support keeps Native ownership and follows its frame', async () => {
   const f = await fixture('Menu', 'Back');
   const app = document.querySelector('ion-app')!;
   app.classList.add('ios-theme-vertical-bars');
@@ -964,9 +965,7 @@ test('a dismissing modal retires once and never reacquires while its frame moves
     expect(f.snapshots.at(-1)?.verticalBarNavigation).toHaveLength(1);
   });
   modal.dispatchEvent(new CustomEvent('ionModalWillDismiss', { bubbles: true }));
-  await vi.waitFor(() => expect(f.snapshots.at(-1)?.controls).toHaveLength(0));
-  expect(f.snapshots.at(-1)?.transitionDuration).toBe(0);
-  const retired = f.snapshots.length;
+  expect(f.snapshots.at(-1)?.controls).toHaveLength(1);
   for (let i = 0; i < 5; i++) {
     content.getBoundingClientRect = () =>
       ({
@@ -982,9 +981,11 @@ test('a dismissing modal retires once and never reacquires while its frame moves
     window.dispatchEvent(new Event('nativeUIRefresh'));
     await new Promise((resolve) => setTimeout(resolve, 30));
   }
-  expect(f.snapshots).toHaveLength(retired);
-  expect(f.leaving.querySelector('button')!.hasAttribute('data-native-ui-projected')).toBe(false);
+  await vi.waitFor(() => expect(f.snapshots.at(-1)?.verticalBarFrame?.y).toBe(300));
+  expect(f.snapshots.at(-1)?.controls).toHaveLength(1);
+  expect(f.leaving.querySelector('button')!.hasAttribute('data-native-ui-projected')).toBe(true);
   modal.dispatchEvent(new CustomEvent('ionModalDidDismiss', { bubbles: true }));
+  expect(f.leaving.querySelector('button')!.hasAttribute('data-native-ui-projected')).toBe(false);
   app.append(f.leaving, f.entering);
   modal.remove();
   await vi.waitFor(() => expect(f.snapshots.at(-1)?.controls.length).toBeGreaterThan(0));

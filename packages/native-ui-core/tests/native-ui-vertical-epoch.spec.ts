@@ -1,5 +1,4 @@
 import { afterEach, expect, test, vi } from 'vitest';
-import { mockSnapshotOwnership } from './snapshot-scope-fixture';
 import { prehideVerticalBarsToolbarSources } from '../src/native/prehide';
 import { createVerticalBarsWebProjection } from '../src/native/vertical-bars-web';
 import { getProjectionState } from '../src/native/shared/covered-source';
@@ -29,7 +28,7 @@ afterEach(() => {
 test('the web back clone is not re-created or painted while native owns the rail', async () => {
   document.body.innerHTML = `<ion-app class="ios-theme-vertical-bars">
     <main class="ion-page" id="root">
-      <ion-header><ion-toolbar><ion-buttons slot="end"><ion-button id="gear" data-vertical-bars="true"><ion-icon slot="icon-only" name="cog"></ion-icon></ion-button></ion-buttons></ion-toolbar></ion-header>
+      <ion-header><ion-toolbar><ion-buttons slot="end"><ion-button id="gear" data-vertical-bars="true">Gear</ion-button></ion-buttons></ion-toolbar></ion-header>
     </main>
     <main class="ion-page ion-page-hidden" id="shell">
       <ion-tabs><ion-router-outlet><main class="ion-page" id="tab">
@@ -38,7 +37,7 @@ test('the web back clone is not re-created or painted while native owns the rail
     </main>
   </ion-app>`;
   document.querySelectorAll<HTMLElement>('*').forEach((element) => {
-    Object.assign(element.style, { visibility: 'visible', opacity: '1' });
+    Object.assign(element.style, { visibility: 'visible', opacity: '1', transform: 'none', fontSize: '16px', color: 'rgb(0,0,0)' });
     size(element, 10);
   });
   vi.stubGlobal(
@@ -49,6 +48,7 @@ test('the web back clone is not re-created or painted while native owns the rail
       disconnect() {}
     },
   );
+  vi.stubGlobal('matchMedia', () => ({ matches: true, addEventListener() {}, removeEventListener() {} }));
   const back = document.querySelector<HTMLIonBackButtonElement>('#back')!;
   back.attachShadow({ mode: 'open' }).innerHTML = '<button part="native"><span class="button-inner"></span></button>';
 
@@ -62,8 +62,6 @@ test('the web back clone is not re-created or painted while native owns the rail
   } as unknown as NativeUIPlugin;
 
   const prehide = prehideVerticalBarsToolbarSources(document, () => true);
-  const { owners } = mockSnapshotOwnership(projectionState);
-  vi.spyOn(projectionState, 'nativeOwns').mockImplementation((source) => owners.has(source));
   const native = await createRuntime(document, plugin, { controls: 'verticalOnly' }, () => true);
   const web = createVerticalBarsWebProjection(
     document,
@@ -79,7 +77,8 @@ test('the web back clone is not re-created or painted while native owns the rail
   });
   creations.observe(document.body, { subtree: true, childList: true });
   try {
-    await vi.waitFor(() => expect(document.querySelector('#gear')!.hasAttribute('data-native-ui-projected')).toBe(true));
+    // Wait for a real Native ACK; Web clones use the same source marker.
+    await vi.waitFor(() => expect(native.getStatus().projected).toBeGreaterThan(0));
 
     const shell = document.querySelector<HTMLElement>('#shell')!;
     const root = document.querySelector<HTMLElement>('#root')!;

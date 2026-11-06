@@ -150,7 +150,12 @@ class NativeUIController(
                 frames
             },
             views = { ids ->
-                if (paused || !entries.keys.containsAll(ids)) null else ids.map { entries.getValue(it).clip }
+                when {
+                    paused -> null
+                    ids.none { entries.containsKey(it) } -> emptyList()
+                    !entries.keys.containsAll(ids) -> null
+                    else -> ids.map { entries.getValue(it).clip }
+                }
             }
         ) { result ->
             result.fold(

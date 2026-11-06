@@ -162,8 +162,10 @@ test('routerless back delegates to the source and suspension returns ownership t
   await vi.waitFor(() => expect(options.rail!.host.children.length).toBe(1));
 });
 
-test('native bridge uses the same standard model, revalidates actions, and retires removed HTML controls', async () => {
-  const { source, options } = mount();
+test('Native source ownership survives deferred geometry and releases on opt-out, unsupported markup and disposal', async () => {
+  const { source, options } = mount(
+    '<section class="ion-page" id="original-page"><button data-native-ui="button">Add</button></section><section class="ion-page" id="next-page"></section>',
+  );
   vi.stubGlobal(
     'ResizeObserver',
     class {
@@ -201,6 +203,37 @@ test('native bridge uses the same standard model, revalidates actions, and retir
   await vi.waitFor(() => expect(handle.getStatus().projected).toBe(1));
   expect(source.getAttribute('data-native-ui')).toBe('button');
   expect(source.hasAttribute('data-native-ui-projected')).toBe(true);
+  const geometry = source.getBoundingClientRect;
+  const ownershipChanges: boolean[] = [];
+  source.addEventListener('nativeUIChange', () => ownershipChanges.push(source.hasAttribute('data-native-ui-projected')));
+  const deferredGeometry = vi.fn(() => DOMRect.fromRect({ width: 0, height: 44 }));
+  source.getBoundingClientRect = deferredGeometry;
+  const accepted = snapshots.length;
+  handle.markForCheck();
+  await vi.waitFor(() => expect(deferredGeometry).toHaveBeenCalled());
+  expect(snapshots).toHaveLength(accepted);
+  expect(snapshots.at(-1)?.controls).toHaveLength(1);
+  expect(source.hasAttribute('data-native-ui-projected')).toBe(true);
+  expect(handle.getStatus().projected).toBe(1);
+  source.getBoundingClientRect = geometry;
+  handle.markForCheck();
+  await vi.waitFor(() => expect(snapshots.at(-1)?.controls).toHaveLength(1));
+  expect(ownershipChanges).not.toContain(false);
+  // A Native-to-Native context move cannot reuse the old page's deferred input.
+  source.getBoundingClientRect = deferredGeometry;
+  const beforeContextMove = snapshots.length;
+  options.root!.querySelector('#next-page')!.append(source);
+  handle.markForCheck();
+  await vi.waitFor(() => expect(snapshots.length).toBeGreaterThan(beforeContextMove));
+  expect(snapshots.at(-1)?.controls).toHaveLength(0);
+  expect(source.hasAttribute('data-native-ui-projected')).toBe(true);
+  expect(handle.getStatus().projected).toBe(1);
+  source.getBoundingClientRect = geometry;
+  source.textContent = 'Ready on next page';
+  handle.markForCheck();
+  await vi.waitFor(() => expect(snapshots.at(-1)?.controls[0]?.items[0]?.label).toBe('Ready on next page'));
+  expect(source.hasAttribute('data-native-ui-projected')).toBe(true);
+  expect(ownershipChanges).not.toContain(false);
   source.setAttribute('data-native-ui', 'disabled');
   await vi.waitFor(() => expect(handle.getStatus().projected).toBe(0));
   expect(source.hasAttribute('data-native-ui-projected')).toBe(false);
@@ -219,6 +252,12 @@ test('native bridge uses the same standard model, revalidates actions, and retir
   source.setAttribute('disabled', '');
   listeners.get('activate')!({ id, revision: snapshot.revision, sequence: 2 });
   expect(click).toHaveBeenCalledTimes(1);
+  const unsupported = document.createElement('input');
+  source.append(unsupported);
+  await vi.waitFor(() => expect(handle.getStatus().projected).toBe(0));
+  expect(source.hasAttribute('data-native-ui-projected')).toBe(false);
+  unsupported.remove();
+  await vi.waitFor(() => expect(handle.getStatus().projected).toBe(1));
   source.remove();
   await vi.waitFor(() => expect(handle.getStatus().projected).toBe(0));
   expect(source.hasAttribute('data-native-ui-projected')).toBe(false);
@@ -355,6 +394,50 @@ test('markForCheck batches property-only changes, skips equal snapshots, and sto
   handle.markForCheck();
   await nextFrame();
   expect(snapshots.length).toBe(stopped);
+});
+
+test.each(['null', 'throw'] as const)('confirmed extension %s releases Native ownership during image restoration', async (failure) => {
+  const { root, options } = mount('<div data-counter>Count</div>');
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  );
+  vi.spyOn(window, 'matchMedia').mockReturnValue({
+    matches: true,
+    addEventListener() {},
+    removeEventListener() {},
+  } as unknown as MediaQueryList);
+  const source = root.querySelector<HTMLElement>('[data-counter]')!;
+  let failed = false;
+  const read = vi.fn(() => {
+    if (!failed) return { props: { count: 1 } };
+    if (failure === 'throw') throw new Error('Reader failed');
+    return null;
+  });
+  const plugin = {
+    addListener: async () => ({ remove: async () => {} }),
+    update: async (snapshot: NativeUISnapshot) => ({ revision: snapshot.revision }),
+    clear: async () => {},
+  } as unknown as NativeUIPlugin;
+  const handle = await createRuntime(document, plugin, {
+    ...options,
+    extensions: [{ name: 'counter', selector: '[data-counter]', read }],
+  });
+  handles.push(handle);
+  await vi.waitFor(() => expect(source.hasAttribute('data-native-ui-projected')).toBe(true));
+  // Restoring images remain visible while the source can be read again.
+  visibleOwners.add(source);
+  expect(projectionState.hasImageHandoff(source)).toBe(true);
+  expect(projectionState.imageOwns(source)).toBe(false);
+  const reads = read.mock.calls.length;
+  failed = true;
+  handle.markForCheck();
+  await vi.waitFor(() => expect(read.mock.calls.length).toBeGreaterThan(reads));
+  await vi.waitFor(() => expect(source.hasAttribute('data-native-ui-projected')).toBe(false));
 });
 
 test('extension images share SVG validation and rasterization without asynchronous readers', async () => {
@@ -659,12 +742,15 @@ test('native popover retention skips image handoff; a Web fallback reuses it wit
   expect(projectionState.nativeOwns(source)).toBe(true);
   expect(source.hasAttribute('data-native-ui-projected')).toBe(true);
   const beforeReturn = updates.length;
+  const measured = source.getBoundingClientRect;
+  source.getBoundingClientRect = () => DOMRect.fromRect({ width: 0, height: 0 });
   popover.dispatchEvent(new CustomEvent('ionPopoverDidDismiss', { bubbles: true }));
   popover.remove();
   await vi.waitFor(() => {
     expect(updates.length).toBeGreaterThan(beforeReturn);
     expect(source.hasAttribute('data-native-ui-snapshot-visible')).toBe(false);
   });
+  source.getBoundingClientRect = measured;
   expect(updates[beforeReturn].controls).toHaveLength(1);
   expect(updates[beforeReturn].transitionDuration).toBe(0);
   expect(source.hasAttribute('data-native-ui-projected')).toBe(true);
@@ -679,9 +765,18 @@ test('native popover retention skips image handoff; a Web fallback reuses it wit
   document.body.append(alert);
   alert.dispatchEvent(new CustomEvent('ionAlertWillPresent', { bubbles: true }));
   await vi.waitFor(() => expect(source.hasAttribute('data-native-ui-snapshot-visible')).toBe(true));
+  // Explicit opt-out ends both source ownership and its cached/active pixel lease.
+  source.setAttribute('data-native-ui', 'disabled');
+  runtime.markForCheck();
+  await vi.waitFor(() => expect(projectionState.nativeOwns(source)).toBe(false));
+  expect(source.hasAttribute('data-native-ui-snapshot-visible')).toBe(false);
+  expect(source.hasAttribute('data-native-ui-snapshot')).toBe(false);
+  source.setAttribute('data-native-ui', 'button');
+  runtime.markForCheck();
+  expect(projectionState.imageOwns(source)).toBe(false);
   alert.remove();
-  await vi.waitFor(() => expect(source.hasAttribute('data-native-ui-snapshot-visible')).toBe(false));
-  expect(source.hasAttribute('data-native-ui-projected')).toBe(true);
+  await vi.waitFor(() => expect(source.hasAttribute('data-native-ui-projected')).toBe(true));
+  expect(source.hasAttribute('data-native-ui-snapshot-visible')).toBe(false);
   vi.spyOn(console, 'warn').mockImplementation(() => {});
   vi.spyOn(plugin, 'update').mockRejectedValue(new Error('native unavailable'));
   source.textContent = 'Changed';
@@ -949,7 +1044,8 @@ test.each([0, 0.25, 0.5])('sheet breakpoint %s keeps dismissal on the acknowledg
   }
 });
 
-test.each([2, 3])('%s modal surfaces keep independent images through nesting, dragging and dismissal', async (depth) => {
+test('three modal surfaces keep independent images through nesting, dragging and dismissal', async () => {
+  const depth = 3;
   const { observeVerticalBarsModals, movingModal } = await import('../src/native/shared/modal');
   const { source, options } = mount(
     '<ion-app class="ios-theme-vertical-bars"><ion-modal><button data-native-ui="button" data-native-ui-placement="rail">Save</button></ion-modal></ion-app>',
@@ -999,8 +1095,10 @@ test.each([2, 3])('%s modal surfaces keep independent images through nesting, dr
   const stopModals = observeVerticalBarsModals(document);
   const listeners = new Set<symbol>();
   let captures = 0;
+  let capturesReady = false;
+  const updates: NativeUISnapshot[] = [];
   const capture = vi.fn(async (args: { action: string; ids?: string[] }) =>
-    args.action === 'prepare'
+    args.action === 'prepare' && capturesReady
       ? {
           token: `surface-image-${++captures}`,
           parts: args.ids!.map((id) => ({ ids: [id], url: 'file:///image.png', x: 10, y: 10, width: 80, height: 44 })),
@@ -1019,6 +1117,7 @@ test.each([2, 3])('%s modal surfaces keep independent images through nesting, dr
       };
     },
     update: async (snapshot: NativeUISnapshot) => {
+      updates.push(snapshot);
       return { revision: snapshot.revision };
     },
     clear: async () => {},
@@ -1027,6 +1126,20 @@ test.each([2, 3])('%s modal surfaces keep independent images through nesting, dr
   handles.push(runtime);
   try {
     first.modal.dispatchEvent(new Event('ionModalDidPresent', { bubbles: true }));
+    await vi.waitFor(() => expect(source.hasAttribute('data-native-ui-projected')).toBe(true));
+    // Motion without a ready image must retain Native ownership, never fall back to Web.
+    first.modal.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    first.move();
+    await vi.waitFor(() => expect(movingModal(document)).toBe(first.modal));
+    const count = updates.length;
+    source.textContent = 'Save while moving';
+    runtime.markForCheck();
+    await vi.waitFor(() => expect(updates.length).toBeGreaterThan(count));
+    expect(updates.at(-1)?.controls).toHaveLength(1);
+    expect(source.hasAttribute('data-native-ui-projected')).toBe(true);
+    expect(source.hasAttribute('data-native-ui-snapshot-visible')).toBe(false);
+    capturesReady = true;
+    first.modal.dispatchEvent(new Event('pointerup', { bubbles: true }));
     await vi.waitFor(() => expect(source.hasAttribute('data-native-ui-snapshot')).toBe(true));
     for (let index = 2; index <= depth; index++) {
       const child = document.createElement('ion-modal');
@@ -1054,13 +1167,38 @@ test.each([2, 3])('%s modal surfaces keep independent images through nesting, dr
     await vi.waitFor(() => expect(movingModal(document)).toBe(top.modal));
     await vi.waitFor(() => expect(top.source.hasAttribute('data-native-ui-snapshot-visible')).toBe(true));
     for (const covered of surfaces.slice(0, -1)) expect(covered.source.hasAttribute('data-native-ui-snapshot-visible')).toBe(true);
+    // Returning to the pinned rail must restore Native before the gesture ends.
+    // The observer's boundary transitions are covered separately; keep raw motion active here.
+    capture.mockClear();
+    const modalState = await import('../src/native/shared/modal');
+    const requestedPixels = vi.spyOn(modalState, 'modalRequestedPixels').mockReturnValue('native');
+    window.dispatchEvent(
+      new CustomEvent(modalState.modalMotionEvent, {
+        detail: { modal: top.modal, moving: true, following: false, requestedPixels: 'native' },
+      }),
+    );
+    await vi.waitFor(() => expect(capture.mock.calls.some(([args]) => args.action === 'restored')).toBe(true));
+    expect(movingModal(document)).toBe(top.modal);
+    expect(top.source.hasAttribute('data-native-ui-snapshot-visible')).toBe(false);
+    expect(top.source.hasAttribute('data-native-ui-projected')).toBe(true);
+    requestedPixels.mockRestore();
     top.modal.dispatchEvent(new Event('pointerup', { bubbles: true }));
-    await vi.waitFor(() => expect(top.source.hasAttribute('data-native-ui-snapshot-visible')).toBe(false));
     while (surfaces.length > 1) {
       const departing = surfaces.pop()!;
+      await vi.waitFor(() => expect(movingModal(document)).toBeUndefined());
       departing.modal.dispatchEvent(new Event('ionModalWillDismiss', { bubbles: true }));
+      await vi.waitFor(() => expect(departing.source.hasAttribute('data-native-ui-snapshot-visible')).toBe(true));
+      // A breakpoint notification must not restore Native during locked dismissal,
+      // even after raw movement has stopped and the overlay requests a bulk end.
+      capture.mockClear();
+      departing.modal.dispatchEvent(new CustomEvent('ionBreakpointDidChange', { bubbles: true, detail: { breakpoint: 0 } }));
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      expect(modalState.modalRequestedPixels(departing.modal)).toBe('image');
+      expect(departing.source.hasAttribute('data-native-ui-snapshot-visible')).toBe(true);
+      expect(capture.mock.calls.some(([args]) => args.action === 'restore')).toBe(false);
       Object.assign(departing.modal, { presented: false });
       departing.modal.dispatchEvent(new Event('ionModalDidDismiss', { bubbles: true }));
+      expect(departing.source.hasAttribute('data-native-ui-projected')).toBe(false);
       departing.modal.remove();
       const exposed = surfaces[surfaces.length - 1].source;
       await vi.waitFor(() => expect(exposed.hasAttribute('data-native-ui-snapshot-visible')).toBe(false));
@@ -1080,42 +1218,45 @@ test.each([2, 3])('%s modal surfaces keep independent images through nesting, dr
   }
 });
 
-test.each([false, true])('covered HTML suspension falls back without a prepared image (capability: %s)', async (capability) => {
-  const { source, options } = mount();
-  vi.stubGlobal(
-    'ResizeObserver',
-    class {
-      observe() {}
-      unobserve() {}
-      disconnect() {}
-    },
-  );
-  vi.spyOn(window, 'matchMedia').mockReturnValue({
-    matches: true,
-    addEventListener() {},
-    removeEventListener() {},
-  } as unknown as MediaQueryList);
-  const capture = vi.fn(async () => ({}));
-  const plugin = {
-    addListener: async () => ({ remove: async () => {} }),
-    update: async (snapshot: NativeUISnapshot) => ({ revision: snapshot.revision }),
-    clear: async () => {},
-    coveredSnapshot: capture,
-  } as unknown as NativeUIPlugin;
-  const runtime = await createRuntime(document, plugin, { ...options, coveredSnapshots: capability });
-  handles.push(runtime);
-  await vi.waitFor(() => expect(source.hasAttribute('data-native-ui-projected')).toBe(true));
-  const first = await runtime.suspend({ covered: true });
-  const second = await runtime.suspend({ covered: true });
-  expect(source.hasAttribute('data-native-ui-projected')).toBe(false);
-  expect(source.hasAttribute('data-native-ui-snapshot-visible')).toBe(false);
-  await first.resume();
-  await first.resume();
-  expect(source.hasAttribute('data-native-ui-projected')).toBe(false);
-  await second.resume();
-  expect(source.hasAttribute('data-native-ui-projected')).toBe(true);
-  if (!capability) expect(capture).not.toHaveBeenCalled();
-});
+test.each([false, true])(
+  'covered HTML suspension retains Native ownership without a prepared image (capability: %s)',
+  async (capability) => {
+    const { source, options } = mount();
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+    vi.spyOn(window, 'matchMedia').mockReturnValue({
+      matches: true,
+      addEventListener() {},
+      removeEventListener() {},
+    } as unknown as MediaQueryList);
+    const capture = vi.fn(async () => ({}));
+    const plugin = {
+      addListener: async () => ({ remove: async () => {} }),
+      update: async (snapshot: NativeUISnapshot) => ({ revision: snapshot.revision }),
+      clear: async () => {},
+      coveredSnapshot: capture,
+    } as unknown as NativeUIPlugin;
+    const runtime = await createRuntime(document, plugin, { ...options, coveredSnapshots: capability });
+    handles.push(runtime);
+    await vi.waitFor(() => expect(source.hasAttribute('data-native-ui-projected')).toBe(true));
+    const first = await runtime.suspend({ covered: true });
+    const second = await runtime.suspend({ covered: true });
+    expect(source.hasAttribute('data-native-ui-projected')).toBe(true);
+    expect(source.hasAttribute('data-native-ui-snapshot-visible')).toBe(false);
+    await first.resume();
+    await first.resume();
+    expect(source.hasAttribute('data-native-ui-projected')).toBe(true);
+    await second.resume();
+    expect(source.hasAttribute('data-native-ui-projected')).toBe(true);
+    if (!capability) expect(capture).not.toHaveBeenCalled();
+  },
+);
 
 test('a rejected native tab selection retains ownership while its native pixels retire', async () => {
   const { source, options } = mount(
@@ -1156,4 +1297,101 @@ test('a rejected native tab selection retains ownership while its native pixels 
   expect(source.hasAttribute('data-native-ui-projected')).toBe(true);
   await vi.waitFor(() => expect(latest!.controls).toHaveLength(1));
   expect(projectionState.nativeOwns(source)).toBe(true);
+});
+
+test('rail markers follow the acquired input through an outdated ACK and a fresh placement change', async () => {
+  const { source, options } = mount('<button type="button" data-native-ui="button" data-native-ui-placement="rail">First</button>');
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  );
+  vi.spyOn(window, 'matchMedia').mockReturnValue({
+    matches: true,
+    addEventListener() {},
+    removeEventListener() {},
+  } as unknown as MediaQueryList);
+  const pending: (() => void)[] = [];
+  const snapshots: NativeUISnapshot[] = [];
+  const plugin = {
+    addListener: async () => ({ remove: async () => {} }),
+    clear: async () => {},
+    update: async (snapshot: NativeUISnapshot) => {
+      snapshots.push(snapshot);
+      if (snapshots.length > 1) await new Promise<void>((resolve) => pending.push(resolve));
+      return { revision: snapshot.revision };
+    },
+  } as unknown as NativeUIPlugin;
+  const runtime = await createRuntime(document, plugin, options);
+  try {
+    await vi.waitFor(() => expect(projectionState.nativeOwns(source)).toBe(true));
+    expect(source.hasAttribute('data-native-ui-vertical-bars')).toBe(true);
+    source.textContent = 'Second';
+    runtime.markForCheck();
+    await vi.waitFor(() => expect(pending).toHaveLength(1));
+    source.textContent = 'Third';
+    runtime.markForCheck();
+    pending.shift()!();
+    await vi.waitFor(() => expect(snapshots).toHaveLength(3));
+    expect(projectionState.nativeOwns(source)).toBe(true);
+    expect(source.hasAttribute('data-native-ui-vertical-bars')).toBe(true);
+    expect(source.hasAttribute('data-native-ui-vertical-bars-member')).toBe(true);
+    source.setAttribute('data-native-ui-placement', 'element');
+    runtime.markForCheck();
+    pending.shift()!();
+    await vi.waitFor(() => expect(snapshots).toHaveLength(4));
+    expect(source.hasAttribute('data-native-ui-vertical-bars')).toBe(true);
+    pending.shift()!();
+    await vi.waitFor(() => expect(source.hasAttribute('data-native-ui-vertical-bars')).toBe(false));
+    expect(source.hasAttribute('data-native-ui-vertical-bars-member')).toBe(false);
+    expect(projectionState.nativeOwns(source)).toBe(true);
+  } finally {
+    const destroyed = runtime.destroy();
+    pending.splice(0).forEach((resolve) => resolve());
+    await destroyed;
+  }
+});
+
+test('an authored hidden source releases after its image handoff ends and can reacquire', async () => {
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  );
+  vi.spyOn(window, 'matchMedia').mockReturnValue({
+    matches: true,
+    addEventListener() {},
+    removeEventListener() {},
+  } as unknown as MediaQueryList);
+  const { source, options } = mount();
+  const snapshots: NativeUISnapshot[] = [];
+  const plugin = {
+    addListener: async () => ({ remove: async () => {} }),
+    update: async (snapshot: NativeUISnapshot) => {
+      snapshots.push(snapshot);
+      return { revision: snapshot.revision };
+    },
+    clear: async () => {},
+  } as unknown as NativeUIPlugin;
+  const handle = await createRuntime(document, plugin, options);
+  handles.push(handle);
+  await vi.waitFor(() => expect(source.hasAttribute('data-native-ui-projected')).toBe(true));
+  owners.add(source);
+  source.style.display = 'none';
+  handle.markForCheck();
+  await vi.waitFor(() => expect(snapshots.at(-1)?.controls).toHaveLength(0));
+  expect(source.hasAttribute('data-native-ui-projected')).toBe(true);
+  owners.delete(source);
+  handle.markForCheck();
+  await vi.waitFor(() => expect(source.hasAttribute('data-native-ui-projected')).toBe(false));
+  source.style.removeProperty('display');
+  handle.markForCheck();
+  await vi.waitFor(() => expect(snapshots.at(-1)?.controls).toHaveLength(1));
+  expect(source.hasAttribute('data-native-ui-projected')).toBe(true);
 });

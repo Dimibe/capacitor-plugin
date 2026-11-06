@@ -9,8 +9,8 @@ export const mockSnapshotOwnership = (scope: NativeUIProjectionState) => {
   vi.spyOn(scope, 'owners', 'get').mockImplementation(() => [...owners]);
   vi.spyOn(scope, 'visibleOwners', 'get').mockImplementation(() => [...visibleOwners]);
   vi.spyOn(scope, 'preparedOwners', 'get').mockImplementation(() => [...preparedOwners]);
-  vi.spyOn(scope, 'owns').mockImplementation((element) => [...owners].some((owner) => owner === element || owner.contains(element)));
-  vi.spyOn(scope, 'isVisible').mockImplementation((element) =>
+  vi.spyOn(scope, 'imageOwns').mockImplementation((element) => [...owners].some((owner) => owner === element || owner.contains(element)));
+  vi.spyOn(scope, 'imageVisible').mockImplementation((element) =>
     [...visibleOwners].some((owner) => owner === element || owner.contains(element)),
   );
   return { owners, visibleOwners, preparedOwners };

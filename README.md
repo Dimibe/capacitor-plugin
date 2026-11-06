@@ -21,7 +21,9 @@ For example, tapping a projected Save button activates the original Web button. 
 
 Projection changes presentation; it does not translate arbitrary HTML or CSS into native views. Native controls use supported data and styling; a custom Web appearance is not guaranteed to be reproduced. Removing or disabling a source prevents further valid actions. If projection is unavailable or stopped, the runtime releases its hiding state and the source returns to Web presentation, or to an available Web rail. Your application's own hidden/disabled state still applies.
 
-Blocking Web overlays can keep prepared images of native buttons, segments, FABs and tab bars beneath their backdrop. Images retain the captured native appearance and are prepared after native updates and coalesced visual changes. Platform capture can differ from live compositing, including Liquid Glass edge highlights; pixel-identical material reproduction is not guaranteed. Preparation pauses during touch; presentation uses the last completed image without waiting for capture or a bridge acknowledgement. A missing image releases ownership to the existing Web presentation. Native popovers that retain their controls keep the native route. See [the handoff rules](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/appearance#temporary-images-beneath-web-overlays) for movement, restoration and exclusions. Rebuild the native app to enable this capability; older native binaries keep their existing route.
+Native ownership follows the source and its projection context, independently of animation and image availability. Modal presentation, dragging, resizing, and image restoration do not transfer an accepted source to Web while its projection remains eligible. An explicit Web handover, unsupported or rejected projection, runtime failure, or the end of the source/context releases it. A disabled button remains the same Native-owned control with disabled input.
+
+Blocking Web overlays can keep prepared images of native buttons, segments, FABs and tab bars beneath their backdrop. Images retain the captured native appearance and are prepared after native updates and coalesced visual changes. Platform capture can differ from live compositing, including Liquid Glass edge highlights; pixel-identical material reproduction is not guaranteed. Preparation pauses during touch; presentation uses the last completed image without waiting for capture or a bridge acknowledgement. A missing image does not release an accepted Native source to Web. Native popovers that retain their controls keep the native route. See [the handoff rules](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/appearance#temporary-images-beneath-web-overlays) for movement, restoration and exclusions. Rebuild the native app to enable this capability; older native binaries keep their existing route.
 
 ## Choose what to build
 
@@ -101,6 +103,8 @@ From a migrated theme checkout, run `npm run test:native-candidate -- /tmp/rdlab
 ## Releases
 
 The plugin has an independent version from the theme. Run `npm run release` from an up-to-date main when authorized to publish. The `capacitor-vVERSION` tag workflow publishes only this plugin (`next` for prereleases, `latest` for stable versions).
+
+Pin Engine to the same exact version in both npm manifests, `Package.swift`, the podspec and Android Gradle dependency, and update the lockfile together. A floating npm range can resolve a newer Engine than the native dependencies and break installation.
 
 Before the first release, configure the npm trusted publisher for `webview-native-ui/capacitor-plugin`, workflow `release.yml`, environment `npm`. Configure that GitHub environment's reviewer policy as appropriate. Already-published versions cannot be republished; choose a new version for the first release from this repository.
 
