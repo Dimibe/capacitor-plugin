@@ -40,6 +40,10 @@
     "./core": {
       "types": "./dist/esm/core.d.ts",
       "import": "./dist/esm/core.js"
+    },
+    "./dynamic-colors": {
+      "types": "./dist/esm/dynamic-colors.d.ts",
+      "import": "./dist/esm/dynamic-colors.js"
     }
   },
   "files": [
