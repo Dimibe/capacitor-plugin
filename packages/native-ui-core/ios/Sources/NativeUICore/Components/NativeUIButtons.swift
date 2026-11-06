@@ -8,6 +8,7 @@ enum NativeUIButtons {
         let items = node.items
         let rtl = node.rtl
         let effect = UIGlassEffect(style: .regular)
+        effect.isInteractive = true
         let control = UIVisualEffectView(effect: effect)
         control.layer.cornerRadius = node.frame.height * scale / 2
         control.clipsToBounds = true

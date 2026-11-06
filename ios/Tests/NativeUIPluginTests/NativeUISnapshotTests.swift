@@ -995,6 +995,25 @@ final class NativeUISnapshotTests: XCTestCase {
     }
 
     @MainActor
+    func testGroupedButtonsShareInteractiveGlassAndActivateIndependently() throws {
+        guard #available(iOS 26.0, *) else { throw XCTSkip("Requires glass buttons") }
+        let items = [item(["id": "share", "x": 0.0, "y": 0.0]), item(["id": "settings", "x": 52.0, "y": 0.0])]
+        let node = try XCTUnwrap(decode([control(["kind": "ion-buttons", "width": 96.0, "items": items])]).controls.first)
+        var actions: [String] = []
+        let group = try XCTUnwrap(NativeUIButtons.make(node, scale: 1, rendering: NativeUIControlRendering()) {
+            actions.append($0)
+        } as? UIVisualEffectView)
+        XCTAssertTrue(try XCTUnwrap(group.effect as? UIGlassEffect).isInteractive)
+        let buttons = group.contentView.subviews.compactMap { $0 as? UIButton }
+        XCTAssertEqual(buttons.count, 2)
+        for button in buttons {
+            XCTAssertEqual(button.configuration?.background, UIButton.Configuration.plain().background)
+            button.sendActions(for: .touchUpInside)
+        }
+        XCTAssertEqual(actions, ["share", "settings"])
+    }
+
+    @MainActor
     func testClearStandaloneToolbarButtonHasNoGlassBackground() throws {
         guard #available(iOS 26.0, *) else { throw XCTSkip("Requires glass buttons") }
         let node = try XCTUnwrap(decode([control(["kind": "ion-button", "items": [item(["label": "Cancel", "buttonFill": "clear"]) ]])]).controls.first)
