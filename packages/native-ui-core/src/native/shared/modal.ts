@@ -96,9 +96,9 @@ const railPosition = (modal: HTMLElement, app: Element, appStyle: CSSStyleDeclar
       ),
     ).map((target) => {
       const rect = target.getBoundingClientRect();
-      return rect.width > 0 && rect.height > 0
-        ? rect.y - (parseFloat(target.style.getPropertyValue('--ios-theme-vertical-bars-toolbar-offset')) || 0)
-        : NaN;
+      // A Native-owned group can have zero height while its children are concealed.
+      // Boundary selection needs the positioned rail anchor, not its current pixels.
+      return rect.width > 0 ? rect.y - (parseFloat(target.style.getPropertyValue('--ios-theme-vertical-bars-toolbar-offset')) || 0) : NaN;
     });
   const configured = parseFloat(appStyle.getPropertyValue('--ios-theme-vertical-bars-toolbar-top'));
   const boundary = Number.isFinite(configured) ? configured : Math.min(...positions(app));
