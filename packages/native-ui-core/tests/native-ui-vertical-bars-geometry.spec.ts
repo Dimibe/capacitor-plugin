@@ -26,12 +26,18 @@ for (const border of [0, 1 / 3, 1]) {
   });
 }
 
-for (const themed of [false, true]) {
-  test(`modal image targets share the dialog transform only when inert and theme metrics=${themed}`, () => {
+for (const [themed, border] of [
+  [false, 1 / 3],
+  [true, 0],
+  [true, 1 / 3],
+  [true, 1],
+] as const) {
+  test(`modal image targets share the dialog transform only when inert and theme metrics=${themed}, border=${border}px`, () => {
     const modal = document.createElement('ion-modal');
     modal.attachShadow({ mode: 'open' }).innerHTML =
       '<div part="content" role="dialog" aria-modal="true" style="transform:translateY(100px)"><slot></slot></div>';
-    const dialog = modal.shadowRoot!.querySelector('[role="dialog"]')!;
+    const dialog = modal.shadowRoot!.querySelector<HTMLElement>('[role="dialog"]')!;
+    dialog.style.borderTop = `${border}px solid black`;
     Object.defineProperty(modal, 'clientWidth', { value: 466 });
     Object.defineProperties(dialog, { offsetLeft: { value: 8 }, offsetWidth: { value: 450 } });
     modal.getBoundingClientRect = () => DOMRect.fromRect({ width: 466, height: 678 });
@@ -51,12 +57,14 @@ for (const themed of [false, true]) {
       expect(target.assignedSlot?.parentNode).toBe(dialog);
       expect(target.style.position).toBe('absolute');
       expect(target.style.top).not.toContain('modal-offset-top');
+      expect(100 + border + 32 + parseFloat(target.style.marginTop)).toBeCloseTo(132, 5);
       expect(target.style.marginLeft).toBe('-8px');
       expect(target.style.marginRight).toBe('-8px');
       dialog.getBoundingClientRect = () => DOMRect.fromRect({ x: 30.5, y: 100, width: 405, height: 520.2 });
       placeModalRailTarget(target, modal);
       expect(target.style.marginLeft).toBe('-8px');
       expect(target.style.marginRight).toBe('-8px');
+      expect(100 + border + 32 + parseFloat(target.style.marginTop)).toBeCloseTo(132, 5);
     } else {
       expect(target.assignedSlot?.parentElement).toBe(dialog);
       expect(target.style.top).toBe('174px');

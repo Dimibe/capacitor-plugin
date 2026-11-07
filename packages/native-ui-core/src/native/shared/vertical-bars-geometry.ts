@@ -43,11 +43,12 @@ export const placeModalRailTarget = (target: HTMLElement, surface: HTMLElement) 
   target.slot = modalRailSlot;
   target.style.position = 'absolute';
   target.style.top = 'calc(var(--ios-theme-vertical-bars-modal-toolbar-top) + var(--ios-theme-vertical-bars-toolbar-offset, 0px))';
-  // Native bounds and theme edges are relative to the surface. Convert both
-  // horizontal anchors into the dialog without accumulating offsets on rereads.
+  // Native bounds and theme edges are relative to the surface. Convert the
+  // anchors into the dialog's padding edge without accumulating offsets on rereads.
   // Layout offsets deliberately exclude translation, scale and transform-origin.
   // Those transforms must carry the image, rather than enter this conversion.
   const style = surface.ownerDocument.defaultView!.getComputedStyle(content);
+  target.style.marginTop = `${-(parseFloat(style.borderTopWidth) || 0)}px`;
   const left = content.offsetLeft + (parseFloat(style.borderLeftWidth) || 0);
   const right = content.offsetLeft + content.offsetWidth - (parseFloat(style.borderRightWidth) || 0);
   target.style.marginLeft = `${-left}px`;
