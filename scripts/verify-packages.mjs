@@ -174,6 +174,17 @@ try {
     consumer,
     `
     import { enableNativeUI } from '@rdlabo/capacitor-native-ui/core';
+    import { getDynamicColorScheme, addDynamicColorListener, materialColorRoles, type DynamicColorScheme, type MaterialColorScheme, type MaterialColorRole } from '@rdlabo/capacitor-native-ui';
+    async function colorContract() {
+      const scheme: DynamicColorScheme = await getDynamicColorScheme();
+      const role: MaterialColorRole = materialColorRoles[0];
+      if (scheme.available) {
+        const light: MaterialColorScheme = scheme.light;
+        const color: string | undefined = light[role];
+      }
+      const listener = await addDynamicColorListener(() => {});
+      await listener.remove();
+    }
     import { resolveVerticalBarsLayout } from '@rdlabo/capacitor-native-ui/integration';
     async function layoutContract() {
       const layout: {edge?: 'leading' | 'trailing' | null; inset?: number; toolbarTop?: number} =
@@ -266,8 +277,13 @@ try {
     import * as native from '@rdlabo/capacitor-native-ui';
     import * as vertical from '@rdlabo/capacitor-native-ui/vertical-bars';
     assert.equal(typeof native.enableNativeUI, 'function');
+    assert.equal(typeof native.getDynamicColorScheme, 'function');
+    assert.equal(typeof native.addDynamicColorListener, 'function');
+    assert(native.materialColorRoles.includes('primary'));
     assert.equal(typeof vertical.enableVerticalControlArea, 'function');
     assert.equal(vertical.withNativeUITransition, undefined);
+    await assert.rejects(import('@rdlabo/capacitor-native-ui/dynamic-colors'), { code: 'ERR_PACKAGE_PATH_NOT_EXPORTED' });
+    assert.deepEqual(await native.getDynamicColorScheme(), { available: false, systemDark: false });
     const integration = await import('@rdlabo/capacitor-native-ui/integration');
     assert.equal(integration.connectNativeUITransition, undefined);
     assert.equal(typeof integration.suspendNativeUI, 'function');
@@ -283,6 +299,9 @@ try {
     const assert = require('node:assert/strict');
     const native = require('@rdlabo/capacitor-native-ui');
     assert.equal(typeof native.enableNativeUI, 'function');
+    assert.equal(typeof native.getDynamicColorScheme, 'function');
+    assert.equal(typeof native.addDynamicColorListener, 'function');
+    assert(native.materialColorRoles.includes('primary'));
   `,
     ],
     { cwd: dir, stdio: 'inherit' },

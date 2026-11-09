@@ -6,7 +6,7 @@ vi.mock('@capacitor/core', () => ({
   Capacitor: { getPlatform: () => platform.value },
   registerPlugin: () => native,
 }));
-import { addDynamicColorListener, getDynamicColorScheme } from '../src/dynamic-colors';
+import { addDynamicColorListener, getDynamicColorScheme } from '../src/index';
 
 beforeEach(() => {
   platform.value = 'android';

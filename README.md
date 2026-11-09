@@ -131,9 +131,10 @@ CocoaPods continues to compile the adapter and shared sources into the existing 
 > **Experimental:** The dynamic color API, returned color roles, and change
 > notification behavior may change in future releases.
 
-The `@rdlabo/capacitor-native-ui/dynamic-colors` entrypoint exports
+The `@rdlabo/capacitor-native-ui` root entrypoint exports
 `getDynamicColorScheme()` and `addDynamicColorListener(listener)`. These work
-independently of Native UI projection. Android 12+ returns `{ available: true,
+independently of Native UI projection. Import them from the package root; the
+experimental `/dynamic-colors` subpath has been removed. Android 12+ returns `{ available: true,
 systemDark, light, dark }`, with supported Material `ColorScheme` roles as opaque `#RRGGBB` colors for
 each scheme, including accent/on-accent/container pairs, surface containers,
 outline, inverse, scrim, and fixed roles. The original six compatibility fields
