@@ -102,7 +102,7 @@ From a migrated theme checkout, run `npm run test:native-candidate -- /tmp/rdlab
 
 ## Releases
 
-The plugin has an independent version from the theme. Run `npm run release` from an up-to-date main when authorized to publish. The `capacitor-vVERSION` tag workflow publishes only this plugin (`next` for prereleases, `latest` for stable versions).
+The plugin has an independent version from the theme. Run `npm run release` from an up-to-date main when authorized to publish. The `vVERSION` tag workflow publishes only this plugin (`next` for prereleases, `latest` for stable versions).
 
 Pin Engine to the same exact version in both npm manifests, `Package.swift`, the podspec and Android Gradle dependency, and update the lockfile together. A floating npm range can resolve a newer Engine than the native dependencies and break installation.
 

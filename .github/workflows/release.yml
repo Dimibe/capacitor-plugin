@@ -1,7 +1,7 @@
 name: Release
 on:
   push:
-    tags: ['capacitor-v*']
+    tags: ['v*']
 permissions:
   contents: read
 jobs:
@@ -29,7 +29,7 @@ jobs:
           node --input-type=module <<'JS'
           import assert from 'node:assert/strict';
           import { readFileSync } from 'node:fs';
-          const version = process.env.GITHUB_REF_NAME.replace(/^capacitor-v/, '');
+          const version = process.env.GITHUB_REF_NAME.replace(/^v/, '');
           assert.match(version, /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/);
           assert.equal(JSON.parse(readFileSync('package.json')).version, version);
           JS
@@ -40,6 +40,6 @@ jobs:
         run: sh scripts/verify-engine-maven.sh "$(node -p "require('./package.json').dependencies['@webview-native-ui/engine']")"
       - name: Publish plugin
         run: |
-          VERSION=${GITHUB_REF_NAME#capacitor-v}
+          VERSION=${GITHUB_REF_NAME#v}
           case "$VERSION" in *-*) DIST_TAG=next ;; *) DIST_TAG=latest ;; esac
           npm publish --ignore-scripts --provenance --access public --tag "$DIST_TAG"
