@@ -88,6 +88,16 @@ For hinge-driven content layout, read `getFoldState()` and subscribe to `foldSta
 
 On supported iOS versions, adding `.ios-theme-vertical-bars` changes only controls that the system relocates into the physical side rail. Native UI presents eligible tabs, back navigation, menu buttons, and toolbar actions through a SwiftUI `TabView` and toolbar once the class is applied. When the OS reports a rail edge — on iPhone Duo linked against iOS 27.1 or later — it must agree with the applied placement; a disagreeing report keeps the rail on the Web. Without a device-reported edge, projection retains its Web fallback. A placement preference cannot enable an unsupported native rail. SwiftUI owns their adaptive placement and Liquid Glass appearance; Ionic remains the source of labels, icons, selected/disabled state, routing, form submission, and click handlers.
 
+Tab badges come from a visible `ion-badge` inside the original `ion-tab-button`. Updating its text updates the native badge; hiding or removing it clears the badge. The native rail uses SwiftUI's system badge appearance. Web fallback keeps the original Ionic tab and badge, including its CSS colors. Ionic hides empty badges by default, so an empty badge must be made visible in CSS to request a notification dot.
+
+```html
+<ion-tab-button tab="inbox">
+  <ion-icon name="mail-outline"></ion-icon>
+  <ion-label>Inbox</ion-label>
+  <ion-badge color="danger">3</ion-badge>
+</ion-tab-button>
+```
+
 The SwiftUI surface is clipped and hit-tested to the system rail. Web content remains visible and interactive outside that physical region. The runtime optimistically updates tab selection before forwarding the action to the original `ion-tab-button`, using the same event and stale-revision protection as the other native controls. Overlay layout follows the [optional theme rail layout](https://docs.rdlabo.dev/projects/ionic-theme-ios27/docs/vertical-bars-layout#reserve-the-vertical-rail) when that stylesheet is used; custom layouts remain the application’s responsibility.
 
 ### Native popovers (Vertical Bars only)

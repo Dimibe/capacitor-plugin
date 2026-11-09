@@ -52,13 +52,43 @@ const fixture = async (modal?: HTMLIonModalElement) => {
   };
   const manager = await createCoveredSnapshots(
     document,
-    { coveredSnapshot: bridge } as unknown as NativeUIPlugin,
+    { coveredSnapshot: bridge, getVerticalBarsGeometry: vi.fn() } as unknown as NativeUIPlugin,
     listen as NativeUIPlugin['addListener'],
     callbacks,
   );
   managers.push(manager);
   return { manager, button, candidate, bridge, capture, callbacks, touch: (active: boolean) => interaction({ active }) };
 };
+test.each([false, true])('only Modal rail preparation requests renderer-only capture: modal=%s', async (insideModal) => {
+  const modal = insideModal ? document.createElement('ion-modal') : undefined;
+  if (modal) document.body.append(modal);
+  const f = await fixture(modal);
+  f.manager.consider(1, [f.candidate]);
+  await drain();
+  const requests = f.bridge.mock.calls.map(([request]) => request).filter((request) => request.action === 'prepare');
+  expect(requests).toHaveLength(1);
+  if (modal) expect(requests[0]).toMatchObject({ captureMode: 'view', imageSurface: 'web' });
+  else {
+    expect(requests[0]).not.toHaveProperty('captureMode');
+    expect(requests[0]).not.toHaveProperty('imageSurface');
+    expect(f.manager.webSurface).toBe(false);
+  }
+});
+test('ordinary Modal controls do not enter the rail image handoff', async () => {
+  const modal = document.createElement('ion-modal');
+  document.body.append(modal);
+  const f = await fixture(modal);
+  delete f.candidate.control.placement;
+  f.manager.consider(1, [f.candidate]);
+  await drain();
+  f.manager.begin();
+  await drain();
+  expect(f.bridge.mock.calls.some(([request]) => request.action === 'prepare')).toBe(false);
+  expect(projectionState.imageOwns(f.button)).toBe(false);
+  expect(projectionState.imageVisible(f.button)).toBe(false);
+  expect(document.querySelector('[data-native-ui-projection-node]')).toBeNull();
+});
+
 test('missing image keeps Web projection without waiting or capturing', async () => {
   const f = await fixture();
   expect(f.manager.begin()).toBeUndefined();
@@ -283,7 +313,7 @@ test('invalidation during restoration does not strand the next prepared image', 
   f.manager.begin();
   expect(f.manager.token).toBe('image-2');
 });
-test.each([false, true])('another overlay retires only the return copy (acknowledged: %s)', async (acknowledged) => {
+test.each([false, true])('reopening retires only accepted returns (acknowledged: %s)', async (acknowledged) => {
   const f = await fixture();
   f.manager.consider(1, [f.candidate]);
   await drain();
@@ -295,7 +325,10 @@ test.each([false, true])('another overlay retires only the return copy (acknowle
   }
   f.manager.begin();
   expect(f.manager.token).toBe('image-1');
-  expect(f.bridge).toHaveBeenCalledWith({ action: 'restored', token: 'image-1' });
+  if (acknowledged) expect(f.bridge).toHaveBeenCalledWith({ action: 'restored', token: 'image-1' });
+  else expect(f.bridge).not.toHaveBeenCalledWith({ action: 'restored', token: 'image-1' });
+  expect(f.bridge.mock.calls.filter(([request]) => request.action === 'cover')).toHaveLength(2);
+  expect(f.bridge).not.toHaveBeenCalledWith({ action: 'release', token: 'image-1' });
 });
 
 test('a stalled native restoration releases the image lease promptly', async () => {
@@ -436,13 +469,12 @@ test('moving modal keeps the background cache and resumes only after its own con
   foreground.manager.end();
   expect(projectionState.imageOwns(foreground.button)).toBe(false);
   expect(projectionState.imageOwns(background.button)).toBe(true);
-  expect(foreground.bridge).toHaveBeenCalledWith(
-    expect.objectContaining({ action: 'restore', token: 'image-1', parts: [expect.objectContaining({ ids: ['button'] })] }),
-  );
+  expect(foreground.bridge.mock.calls.some(([args]) => args.action === 'restore')).toBe(true);
+  expect(clone.hasAttribute('data-native-ui-snapshot-visible')).toBe(true);
   foreground.manager.updated(background.manager.token, [], 3);
   foreground.manager.updated(background.manager.token, ['button'], 2);
-  expect(clone.hasAttribute('data-native-ui-snapshot-visible')).toBe(true);
-  foreground.manager.updated(background.manager.token, ['button'], 3);
+  expect(foreground.manager.restoring).toBe(true);
+  foreground.manager.updated(background.manager.token, ['button'], 4);
   expect(clone.hasAttribute('data-native-ui-snapshot-visible')).toBe(false);
   expect(projectionState.preparedOwners.includes(background.button)).toBe(true);
   expect(projectionState.imageOwns(background.button)).toBe(true);
@@ -752,3 +784,30 @@ test('retained engine image mutations do not invalidate captures, but author cha
   observer.disconnect();
   source.remove();
 });
+
+for (const delta of [1.206512451171875, 80]) {
+  test(`Modal rail pixels survive source movement relative to the pinned image target: ${delta}`, async () => {
+    const modal = document.createElement('ion-modal');
+    document.body.append(modal);
+    const f = await fixture(modal);
+    const clone = projectionState.getTarget(f.button)!;
+    clone.getBoundingClientRect = () => DOMRect.fromRect({ x: 394, y: 174, width: 48, height: 48 });
+    f.manager.consider(1, [f.candidate]);
+    await drain();
+    f.touch(true);
+    f.candidate.control.y += delta;
+    f.manager.consider(2, [f.candidate]);
+    f.manager.begin();
+    await drain();
+    expect(f.manager.token).toBe('image-1');
+    expect(clone.hasAttribute('data-native-ui-snapshot-visible')).toBe(true);
+    expect(f.bridge.mock.calls.filter(([r]) => r.action === 'prepare')).toHaveLength(1);
+    f.manager.end();
+    await drain();
+    f.manager.updated(undefined, ['button'], 4);
+    f.candidate.control.width++;
+    f.manager.consider(5, [f.candidate]);
+    f.manager.begin();
+    expect(f.manager.token).toBeUndefined();
+  });
+}

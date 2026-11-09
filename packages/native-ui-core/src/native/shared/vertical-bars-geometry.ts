@@ -1,3 +1,5 @@
+import type { WebProjectionOptions } from '@webview-native-ui/engine';
+import { modalToolbarAlignment } from './modal.js';
 import type { Frame, NativeUIVerticalBarFrame } from '../definitions.js';
 
 const measurements = new WeakMap<Element, { frame: NativeUIVerticalBarFrame; viewport: string }>();
@@ -42,12 +44,21 @@ export const placeModalRailTarget = (target: HTMLElement, surface: HTMLElement) 
   if (slot.parentElement !== content) content.append(slot);
   target.slot = modalRailSlot;
   target.style.position = 'absolute';
-  target.style.top = 'calc(var(--ios-theme-vertical-bars-modal-toolbar-top) + var(--ios-theme-vertical-bars-toolbar-offset, 0px))';
-  // Native bounds and theme edges are relative to the surface. Convert both
-  // horizontal anchors into the dialog without accumulating offsets on rereads.
+  const toolbar = modalToolbarAlignment(surface);
+  const first = target.matches('ion-buttons') ? target.querySelector('ion-button, ion-back-button, ion-menu-button') : target;
+  const height =
+    parseFloat(target.style.getPropertyValue('--native-ui-toolbar-anchor-height')) || first?.getBoundingClientRect().height || 0;
+  const top =
+    toolbar && height > 0
+      ? `max(calc(var(--ios-theme-vertical-bars-toolbar-top) - var(--ios-theme-vertical-bars-modal-offset-top, 0px)), ${toolbar.centerY - height / 2 - content.getBoundingClientRect().y}px)`
+      : 'var(--ios-theme-vertical-bars-modal-toolbar-top)';
+  target.style.top = `calc(${top} + var(--ios-theme-vertical-bars-toolbar-offset, 0px))`;
+  // Native bounds and theme edges are relative to the surface. Convert the
+  // anchors into the dialog's padding edge without accumulating offsets on rereads.
   // Layout offsets deliberately exclude translation, scale and transform-origin.
   // Those transforms must carry the image, rather than enter this conversion.
   const style = surface.ownerDocument.defaultView!.getComputedStyle(content);
+  target.style.marginTop = `${-(parseFloat(style.borderTopWidth) || 0)}px`;
   const left = content.offsetLeft + (parseFloat(style.borderLeftWidth) || 0);
   const right = content.offsetLeft + content.offsetWidth - (parseFloat(style.borderRightWidth) || 0);
   target.style.marginLeft = `${-left}px`;
@@ -84,8 +95,6 @@ export const alignVerticalBarClone = (clone: HTMLElement, source: Element, paren
     margin: '0',
     boxSizing: 'border-box',
   });
-  if (source.closest('ion-modal'))
-    clone.style.setProperty('--native-ui-modal-rail-image-radius', `${frame.cornerRadius ?? Math.min(frame.width, frame.height) / 2}px`);
 };
 
 export const alignVerticalTabBar = (
@@ -130,3 +139,33 @@ export const alignVerticalTabBar = (
   win.addEventListener('resize', stop);
   return stop;
 };
+
+const toolbarTargets = '.ios-theme-vertical-bars-toolbar-projection, .ios-theme-vertical-bars-back-button-projection';
+
+/** Native measurements define anchor size and spacing; the theme supplies placement. */
+export const createModalRailLayout =
+  (modal: HTMLElement, targetForID: (id: string) => HTMLElement | undefined): NonNullable<WebProjectionOptions['layoutFrame']> =>
+  (target, part, parts) => {
+    const bounds = part.anchorBounds;
+    if (!bounds || !target.matches(toolbarTargets)) return;
+    const toolbar = modalToolbarAlignment(modal);
+    if (!toolbar) return;
+    const first = parts
+      .filter((item) => item.anchorBounds && item.ids.some((id) => targetForID(id)?.matches(toolbarTargets)))
+      .reduce<typeof part | undefined>(
+        (first, item) => (!first || item.y + item.anchorBounds!.y < first.y + first.anchorBounds!.y ? item : first),
+        undefined,
+      );
+    if (!first?.anchorBounds) return;
+    const height = first.anchorBounds.height;
+    target.style.setProperty('--native-ui-toolbar-anchor-height', `${height}px`);
+    placeModalRailTarget(target, modal);
+    const offset = part.y + bounds.y - first.y - first.anchorBounds.y;
+    const rect = target.getBoundingClientRect();
+    return {
+      x: rect.x + (rect.width - bounds.width) / 2,
+      y: Math.max(toolbar.minimumTop, toolbar.centerY - height / 2) + offset,
+      width: bounds.width,
+      height: bounds.height,
+    };
+  };

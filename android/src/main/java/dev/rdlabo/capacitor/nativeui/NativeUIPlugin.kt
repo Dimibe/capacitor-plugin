@@ -1,5 +1,6 @@
 package dev.rdlabo.capacitor.nativeui
 
+import android.content.res.Configuration
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
@@ -15,6 +16,16 @@ class NativeUIPlugin : Plugin() {
     private fun request(call: PluginCall) = NativeUICall(call.data,
         { call.resolve(JSObject(it.toString())) }, { message, error -> call.reject(message, error) })
     @PluginMethod
+    fun getDynamicColorScheme(call: PluginCall) {
+        activity.runOnUiThread {
+            try {
+                call.resolve(DynamicColorScheme.read(context.applicationContext))
+            } catch (error: Exception) {
+                call.reject("Unable to read dynamic colors", error)
+            }
+        }
+    }
+    @PluginMethod
     fun configure(call: PluginCall) = renderer.configure(request(call))
     @PluginMethod
     fun getWebViewMetrics(call: PluginCall) = renderer.getWebViewMetrics(request(call))
@@ -27,6 +38,14 @@ class NativeUIPlugin : Plugin() {
     @PluginMethod
     fun clear(call: PluginCall) = renderer.clear(request(call))
     override fun handleOnPause() { renderer.pause(); super.handleOnPause() }
-    override fun handleOnResume() { renderer.resume(); super.handleOnResume() }
+    override fun handleOnConfigurationChanged(newConfig: Configuration) {
+        notifyListeners("dynamicColorSchemeChange", JSObject())
+        super.handleOnConfigurationChanged(newConfig)
+    }
+    override fun handleOnResume() {
+        notifyListeners("dynamicColorSchemeChange", JSObject())
+        renderer.resume()
+        super.handleOnResume()
+    }
     override fun handleOnDestroy() { renderer.destroy(); super.handleOnDestroy() }
 }

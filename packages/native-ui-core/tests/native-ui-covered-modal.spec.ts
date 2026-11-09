@@ -93,16 +93,17 @@ test.each(['sheet', 'card'])('%s motion spans dragging and settling, without tre
 });
 
 test.each([
-  [136, false],
-  [220, false],
-  [136, true],
-  [220, true],
-] as const)('rail follows only below its boundary, including reversal from %s while dismissing=%s', async (initial, dismissing) => {
+  [136, false, 'ion-button'],
+  [220, false, 'ion-button'],
+  [136, true, 'ion-button'],
+  [220, true, 'ion-button'],
+  [136, false, 'ion-buttons'],
+  [220, false, 'ion-buttons'],
+] as const)('rail reversal follows only below the boundary: y=%s, dismissing=%s, target=%s', async (initial, dismissing, tag) => {
   vi.useFakeTimers();
-  document.body.innerHTML =
-    '<ion-app class="ios-theme-vertical-bars" style="--ios-theme-vertical-bars-toolbar-top:174px"><ion-modal><ion-button class="ios-theme-vertical-bars-toolbar-projection"></ion-button></ion-modal></ion-app>';
+  document.body.innerHTML = `<ion-app class="ios-theme-vertical-bars" style="--ios-theme-vertical-bars-toolbar-top:174px"><ion-modal><${tag} class="ios-theme-vertical-bars-toolbar-projection"></${tag}></ion-modal></ion-app>`;
   const modal = document.querySelector('ion-modal')!;
-  const target = modal.querySelector('ion-button')!;
+  const target = modal.querySelector(tag)!;
   const wrapper = document.createElement('div');
   wrapper.setAttribute('part', 'content');
   Object.defineProperty(wrapper, 'offsetWidth', { value: innerWidth });
@@ -110,7 +111,8 @@ test.each([
   let y = initial;
   let railY = initial > 150 ? 244 : 174;
   wrapper.getBoundingClientRect = () => DOMRect.fromRect({ y, width: innerWidth, height: innerHeight });
-  target.getBoundingClientRect = () => DOMRect.fromRect({ y: railY, width: 48, height: 48 });
+  // Concealing a group's children can collapse its height without moving its anchor.
+  target.getBoundingClientRect = () => DOMRect.fromRect({ y: railY, width: 48, height: tag === 'ion-buttons' ? 0 : 48 });
   modal.attachShadow({ mode: 'open' }).append(wrapper);
   const stop = observeVerticalBarsModals(document);
   try {
@@ -137,7 +139,6 @@ test.each([
       expect(movingModal(document)).toBe(modal);
       expect(followingModal(document)).toBe(dismissing || follows ? modal : undefined);
       expect(modalRequestedPixels(modal)).toBe(dismissing || follows ? 'image' : 'native');
-      expect(modal.hasAttribute('data-native-ui-modal-rail-clip')).toBe(follows);
     }
     modal.dispatchEvent(new Event('pointerup', { bubbles: true }));
     await vi.advanceTimersByTimeAsync(40);
@@ -230,7 +231,6 @@ test.each([
     app.classList.remove('ios-theme-vertical-bars');
     await vi.advanceTimersByTimeAsync(40);
     expect(modal.classList.contains('ios-theme-vertical-bars-modal')).toBe(false);
-    expect(modal.hasAttribute('data-native-ui-modal-rail-clip')).toBe(false);
   } finally {
     stop();
     vi.unstubAllGlobals();
@@ -265,7 +265,6 @@ test.each(['custom source', 'unmeasured target', 'unknown boundary'])(
       modal.dispatchEvent(new Event('ionModalDidPresent', { bubbles: true }));
       modal.dispatchEvent(new Event('ionModalWillDismiss', { bubbles: true }));
       expect(modalRequestedPixels(modal)).toBe('image');
-      expect(modal.hasAttribute('data-native-ui-modal-rail-clip')).toBe(false);
     } finally {
       stop();
     }
@@ -296,7 +295,6 @@ test.each([false, true])('a covered Modal keeps below-boundary image clipping wi
   const stop = observeVerticalBarsModals(document);
   try {
     parent.modal.dispatchEvent(new Event('ionModalDidPresent', { bubbles: true }));
-    expect(parent.modal.hasAttribute('data-native-ui-modal-rail-clip')).toBe(true);
     const child = create(2, 174);
     if (nested) {
       parent.modal.append(child.modal);
@@ -306,10 +304,7 @@ test.each([false, true])('a covered Modal keeps below-boundary image clipping wi
     }
     child.modal.dispatchEvent(new Event('ionModalWillPresent', { bubbles: true }));
     expect(parent.target.hasAttribute('data-native-ui-snapshot-visible')).toBe(true);
-    expect(parent.modal.hasAttribute('data-native-ui-modal-rail-clip')).toBe(true);
-    expect(child.modal.hasAttribute('data-native-ui-modal-rail-clip')).toBe(false);
   } finally {
     stop();
   }
-  expect(parent.modal.hasAttribute('data-native-ui-modal-rail-clip')).toBe(false);
 });

@@ -7,6 +7,7 @@ protocol NativeUIVerticalBarsControlling: AnyObject {
     func measuredFrames(relativeTo webView: UIView) -> [String: (frame: CGRect, cornerRadius: CGFloat)]
     @MainActor func attach(to owner: UIViewController, in parent: UIView)
     @MainActor func apply(_ controls: [NativeUIControl], rendering: NativeUIControlRendering, edge: String, animated: Bool, accessory: AnyView?, navigation: [String], navigationPhase: String?)
+    func alignToolbar(_ alignment: NativeUIVerticalBarToolbar?, controls: [NativeUIControl], relativeTo reference: UIView, scale: CGFloat)
     var ownsKeyboardChrome: Bool { get }
     func presentPopover(anchor: String, host: NativeUIOverlayHost, completion: @escaping (Bool) -> Void) -> Bool
     @MainActor func detach(duration: TimeInterval)
@@ -48,6 +49,7 @@ final class NativeUIVerticalBarsModel: ObservableObject {
     @Published var tabTint: String?
     @Published var tabs: [Item] = []
     @Published var selection = ""
+    var layoutSurfaces: () -> Void = {}
     var activate: (String) -> Void = { _ in }
     private var pendingSelection: NativeUITabBar.PendingSelection?
     private var pendingExpiryWork: DispatchWorkItem?
@@ -285,7 +287,7 @@ private struct NativeUIVerticalBarsPage: View {
     }
 
     private func page(_ id: String?) -> some View {
-        NativeUIVerticalBarsContent().modifier(NativeUIVerticalBarsToolbarAdapter(model: model, page: id))
+        NativeUIVerticalBarsContent(layoutSurfaces: model.layoutSurfaces).modifier(NativeUIVerticalBarsToolbarAdapter(model: model, page: id))
             .navigationBarBackButtonHidden(true)
             .toolbar {
                 if model.search?.configuration.available == true {
@@ -299,10 +301,14 @@ private struct NativeUIVerticalBarsPage: View {
 // App-local extension views may contain their own, fully visible navigation stacks.
 @available(iOS 26.0, *)
 private struct NativeUIVerticalBarsContent: UIViewControllerRepresentable {
+    let layoutSurfaces: () -> Void
+
     final class Controller: UIViewController {
+        var layoutSurfaces: () -> Void = {}
         override func viewDidLayoutSubviews() {
             super.viewDidLayoutSubviews()
             suppressContentTransition()
+            layoutSurfaces()
         }
         override func viewWillAppear(_ animated: Bool) {
             super.viewWillAppear(animated)
@@ -325,6 +331,7 @@ private struct NativeUIVerticalBarsContent: UIViewControllerRepresentable {
     }
     func makeUIViewController(context: Context) -> Controller {
         let controller = Controller()
+        controller.layoutSurfaces = layoutSurfaces
         controller.view.backgroundColor = .clear
         return controller
     }
@@ -446,11 +453,17 @@ final class NativeUIVerticalBarsController: NativeUIVerticalBarsControlling {
         var railEdge = "right"
         var layoutSearch: (() -> Void)?
         var layoutTabs: (() -> Void)?
+        var layoutToolbar: (() -> Void)?
         override func viewDidLayoutSubviews() {
             super.viewDidLayoutSubviews()
-            makeFullSizeSurfacesTransparent(in: view)
+            layoutSurfaces()
             layoutSearch?()
             layoutTabs?()
+            layoutToolbar?()
+        }
+
+        func layoutSurfaces() {
+            makeFullSizeSurfacesTransparent(in: view)
         }
 
         private func makeFullSizeSurfacesTransparent(in surface: UIView) {
@@ -562,11 +575,48 @@ final class NativeUIVerticalBarsController: NativeUIVerticalBarsControlling {
          changed: @escaping (String, NativeUISearchPhase, String, Bool, Int) -> Int) {
         self.changed = changed
         model.activate = activate
+        // UIKit can materialize tab/navigation backings after the hosting layout.
+        // Reuse the same transparency policy at the inner content layout boundary.
+        model.layoutSurfaces = { [weak self] in self?.controller.layoutSurfaces() }
         container.backgroundColor = .clear
         controller.view.backgroundColor = .clear
         controller.view.isOpaque = false
         controller.layoutSearch = { [weak self] in self?.model.search?.configureField() }
         controller.layoutTabs = { [weak self] in self?.applyTabTint() }
+    }
+
+    private var toolbarLayoutGeneration = 0
+    private var toolbarLayoutPending = false
+
+    func alignToolbar(_ alignment: NativeUIVerticalBarToolbar?, controls: [NativeUIControl], relativeTo reference: UIView, scale: CGFloat) {
+        toolbarLayoutGeneration += 1
+        let generation = toolbarLayoutGeneration
+        toolbarLayoutPending = false
+        controller.layoutToolbar = nil
+        guard let target = alignment, controls.contains(where: { [.button, .buttons, .backButton, .menuButton].contains($0.kind) }) else { return }
+        controller.layoutToolbar = { [weak self, weak reference] in
+            guard let self, !self.toolbarLayoutPending else { return }
+            self.toolbarLayoutPending = true
+            // SwiftUI's layout callback is read-only. Apply one accepted placement
+            // after layout, without feeding a frame change back into that layout pass.
+            DispatchQueue.main.async { [weak self, weak reference] in
+                guard let self, self.toolbarLayoutGeneration == generation else { return }
+                self.toolbarLayoutPending = false
+                guard self.controller.layoutToolbar != nil, let reference else { return }
+                if NativeUIVerticalBarsGeometry.alignToolbar(target, in: self.container, relativeTo: reference, controls: controls, scale: scale) {
+                    self.controller.layoutToolbar = nil
+                }
+            }
+        }
+        controller.view.setNeedsLayout()
+        controller.view.layoutIfNeeded()
+        // Apply outside SwiftUI's layout callback, before the caller can reveal
+        // the renderer. Defer only when the controls are not measurable yet.
+        if NativeUIVerticalBarsGeometry.alignToolbar(target, in: container, relativeTo: reference, controls: controls, scale: scale) {
+            controller.layoutToolbar = nil
+        } else {
+            controller.layoutToolbar?()
+        }
     }
 
     private weak var tintedTabBar: UITabBar?

@@ -40,6 +40,10 @@
     "./core": {
       "types": "./dist/esm/core.d.ts",
       "import": "./dist/esm/core.js"
+    },
+    "./dynamic-colors": {
+      "types": "./dist/esm/dynamic-colors.d.ts",
+      "import": "./dist/esm/dynamic-colors.js"
     }
   },
   "files": [
@@ -101,7 +105,7 @@
   },
   "dependencies": {
     "@rdlabo/ionic-theme-utils": "0.1.5",
-    "@webview-native-ui/engine": "1.0.3"
+    "@webview-native-ui/engine": "1.0.4"
   },
   "devDependencies": {
     "@capacitor/android": "^8.5.3",

@@ -238,6 +238,8 @@ export interface NativeUISnapshot {
   /** Prepared Web image currently covering the inactive root surface. */
   coveredSnapshotToken?: string;
   revision: number;
+  /** Retain these Native renderers while their pixels are carried by the foreground Modal's DOM images. */
+  imageSourceIds?: string[];
   transitionDuration?: number;
   /** Prepared native toolbar endpoints, controlled by the page animation clock. */
   toolbarTransition?: { id: number; sourceIds: string[]; destination: NativeUIControl[] };
@@ -246,6 +248,8 @@ export interface NativeUISnapshot {
   verticalBarEdge?: 'left' | 'right';
   /** Visible foreground modal bounds; omitted for the full page. */
   verticalBarFrame?: Frame;
+  /** Foreground Web toolbar center and the device-reserved rail top, in viewport pixels. */
+  verticalBarToolbar?: { centerY: number; minimumTop: number };
   modalAnimation?: import('./shared/modal-animation.js').ModalAnimation;
   /** Web-owned page identities, from root through the active rail destination. */
   verticalBarNavigation?: string[];
@@ -282,7 +286,7 @@ export interface NativeUIConnectionState {
 /** @internal Prepared native pixels, served through Capacitor's local resource handler. */
 export interface CoveredSnapshot {
   token: string;
-  parts: (Frame & { ids: string[]; url: string })[];
+  parts: (Frame & { ids: string[]; url: string; anchorBounds?: Frame })[];
 }
 
 export interface NativeUIPlugin {

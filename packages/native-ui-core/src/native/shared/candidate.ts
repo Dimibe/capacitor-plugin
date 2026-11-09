@@ -78,7 +78,9 @@ export const appendItem = (
   const native = child.shadowRoot?.querySelector('[part="native"]');
   const labelStyle = getComputedStyle(labelElement);
   const badge = child.querySelector<HTMLElement>('ion-badge');
-  const badgeStyle = badge && visible(badge) ? getComputedStyle(badge) : undefined;
+  // Rail tabs are placed independently of their Web coordinates, including their badges.
+  const railTab = candidate.control.kind === 'tab-bar' && isVerticalBarsSource(candidate.element);
+  const badgeStyle = badge && visible(badge, railTab) ? getComputedStyle(badge) : undefined;
   const sourceFill = (child as HTMLIonButtonElement).fill;
   const projectionOwner = [child, child.closest('ion-buttons')].find((element) =>
     element?.matches('[data-projection="source"], [data-projection="system"], .ios-theme-projection-source, .ios-theme-projection-system'),
