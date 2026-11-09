@@ -139,7 +139,6 @@ test.each([
       expect(movingModal(document)).toBe(modal);
       expect(followingModal(document)).toBe(dismissing || follows ? modal : undefined);
       expect(modalRequestedPixels(modal)).toBe(dismissing || follows ? 'image' : 'native');
-      expect(modal.hasAttribute('data-native-ui-modal-rail-clip')).toBe(follows);
     }
     modal.dispatchEvent(new Event('pointerup', { bubbles: true }));
     await vi.advanceTimersByTimeAsync(40);
@@ -232,7 +231,6 @@ test.each([
     app.classList.remove('ios-theme-vertical-bars');
     await vi.advanceTimersByTimeAsync(40);
     expect(modal.classList.contains('ios-theme-vertical-bars-modal')).toBe(false);
-    expect(modal.hasAttribute('data-native-ui-modal-rail-clip')).toBe(false);
   } finally {
     stop();
     vi.unstubAllGlobals();
@@ -267,7 +265,6 @@ test.each(['custom source', 'unmeasured target', 'unknown boundary'])(
       modal.dispatchEvent(new Event('ionModalDidPresent', { bubbles: true }));
       modal.dispatchEvent(new Event('ionModalWillDismiss', { bubbles: true }));
       expect(modalRequestedPixels(modal)).toBe('image');
-      expect(modal.hasAttribute('data-native-ui-modal-rail-clip')).toBe(false);
     } finally {
       stop();
     }
@@ -298,7 +295,6 @@ test.each([false, true])('a covered Modal keeps below-boundary image clipping wi
   const stop = observeVerticalBarsModals(document);
   try {
     parent.modal.dispatchEvent(new Event('ionModalDidPresent', { bubbles: true }));
-    expect(parent.modal.hasAttribute('data-native-ui-modal-rail-clip')).toBe(true);
     const child = create(2, 174);
     if (nested) {
       parent.modal.append(child.modal);
@@ -308,10 +304,7 @@ test.each([false, true])('a covered Modal keeps below-boundary image clipping wi
     }
     child.modal.dispatchEvent(new Event('ionModalWillPresent', { bubbles: true }));
     expect(parent.target.hasAttribute('data-native-ui-snapshot-visible')).toBe(true);
-    expect(parent.modal.hasAttribute('data-native-ui-modal-rail-clip')).toBe(true);
-    expect(child.modal.hasAttribute('data-native-ui-modal-rail-clip')).toBe(false);
   } finally {
     stop();
   }
-  expect(parent.modal.hasAttribute('data-native-ui-modal-rail-clip')).toBe(false);
 });

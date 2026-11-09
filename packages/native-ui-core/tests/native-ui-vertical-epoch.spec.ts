@@ -2,7 +2,7 @@ import { afterEach, expect, test, vi } from 'vitest';
 import { prehideVerticalBarsToolbarSources } from '../src/native/prehide';
 import { createVerticalBarsWebProjection } from '../src/native/vertical-bars-web';
 import { getProjectionState } from '../src/native/shared/covered-source';
-import type { NativeUIPlugin } from '../src/native/definitions';
+import type { NativeUIPlugin, NativeUISnapshot, NativeUIActivation } from '../src/native/definitions';
 import { createRuntime } from '../src/native/runtime';
 import { suspendNativeUI } from '../src/native-integration';
 import { setVerticalBarsPlacement } from '../src/native/shared/dom';
@@ -148,5 +148,133 @@ test('suppression keeps an existing projection through the epoch', async () => {
     await vi.waitFor(() => expect(document.querySelector(cloneSelector)).toBeNull());
   } finally {
     await web.destroy();
+  }
+});
+
+test.each([
+  { release: 'dismiss', image: true },
+  { release: 'web', image: true },
+  { release: 'dismiss', image: false },
+  { release: 'web', image: false },
+])('Modal policy retains existing controls and ends on $release (image: $image)', async ({ release, image }) => {
+  const { observeVerticalBarsModals } = await import('../src/native/shared/modal');
+  const { mockSnapshotOwnership } = await import('./snapshot-scope-fixture');
+  const { owners } = mockSnapshotOwnership(projectionState);
+  document.body.innerHTML = `<ion-app class="ios-theme-vertical-bars"><ion-modal class="show-modal"><main class="ion-page"><ion-header><ion-toolbar><ion-buttons slot="end"><ion-button class="ios">Close</ion-button><ion-button class="ios">Save</ion-button><span>Auxiliary</span></ion-buttons></ion-toolbar></ion-header></main></ion-modal></ion-app>`;
+  document.querySelectorAll<HTMLElement>('*').forEach((e) => {
+    Object.assign(e.style, {
+      visibility: 'visible',
+      opacity: '1',
+      transform: 'none',
+      fontSize: '16px',
+      color: 'rgb(0,0,0)',
+      overflow: 'visible',
+    });
+    size(e, 10);
+  });
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  );
+  vi.stubGlobal('matchMedia', () => ({ matches: true, addEventListener() {}, removeEventListener() {} }));
+  const modal = document.querySelector('ion-modal')!;
+  Object.assign(modal, { presented: true, overlayIndex: 1 });
+  const wrapper = document.createElement('div');
+  wrapper.setAttribute('part', 'content');
+  modal.attachShadow({ mode: 'open' }).append(wrapper);
+  wrapper.getBoundingClientRect = () => DOMRect.fromRect({ width: innerWidth, height: innerHeight });
+  wrapper.getAnimations = () => [];
+  modal.getAnimations = () => [];
+  Object.defineProperty(wrapper, 'offsetWidth', { value: innerWidth });
+  Object.defineProperty(wrapper, 'offsetLeft', { value: 0 });
+  for (const e of modal.querySelectorAll<HTMLElement>('ion-buttons,ion-button')) setVerticalBarsPlacement(e, true);
+  const group = modal.querySelector<HTMLElement>('ion-buttons')!;
+  const proxy = document.createElement('div');
+  proxy.setAttribute('data-native-ui-proxy', '');
+  proxy.inert = true;
+  proxy.style.cssText = group.style.cssText;
+  size(proxy, 10);
+  modal.append(proxy);
+  projectionState.setTarget(group, proxy);
+  for (const e of group.querySelectorAll<HTMLElement>('ion-button')) projectionState.setTarget(e, proxy);
+  const snapshots: NativeUISnapshot[] = [];
+  const capture = vi.fn(async () => ({}));
+  let activate: ((event: NativeUIActivation) => void) | undefined;
+  const plugin = {
+    addListener: async (name: string, listener: unknown) => {
+      if (name === 'activate') activate = listener as typeof activate;
+      return { remove: async () => {} };
+    },
+    update: async (s: NativeUISnapshot) => {
+      snapshots.push(s);
+      return { revision: s.revision };
+    },
+    clear: async () => {},
+    coveredSnapshot: capture,
+    getVerticalBarsGeometry: async () => ({ items: {} }),
+  } as unknown as NativeUIPlugin;
+  const stop = observeVerticalBarsModals(document);
+  const runtime = await createRuntime(document, plugin, { controls: 'verticalOnly', coveredSnapshots: true }, () => true);
+  try {
+    modal.dispatchEvent(new Event('ionModalWillPresent', { bubbles: true }));
+    modal.dispatchEvent(new Event('ionModalDidPresent', { bubbles: true }));
+    await vi.waitFor(() => expect(snapshots.at(-1)?.controls.length).toBeGreaterThan(0));
+    await vi.waitFor(() => expect(capture).toHaveBeenCalled());
+    const accepted = snapshots.at(-1).controls.map((c) => c.id);
+    const child = modal.querySelector<HTMLElement>('ion-button')!;
+    const clicked = vi.fn();
+    child.addEventListener('click', clicked);
+    await nextFrame();
+    activate?.({ id: snapshots.at(-1)!.controls[0].items[0].id, revision: snapshots.at(-1)!.revision, sequence: 1 });
+    await Promise.resolve();
+    expect(clicked).toHaveBeenCalledTimes(1);
+    clicked.mockClear();
+    if (image) owners.add(child);
+    modal.querySelector('.ion-page')!.dispatchEvent(new Event('ionViewWillLeave', { bubbles: true }));
+    modal.dispatchEvent(new Event('ionModalWillDismiss', { bubbles: true }));
+    window.dispatchEvent(new Event('nativeUIRefresh'));
+    if (image) await vi.waitFor(() => expect(snapshots.at(-1)?.imageSourceIds).toContain(accepted[0]));
+    else {
+      await nextFrame();
+      await nextFrame();
+      expect(snapshots.at(-1)?.imageSourceIds).toBeUndefined();
+    }
+    expect(snapshots.at(-1).controls.map((c) => c.id)).toEqual(accepted);
+    const fresh = document.createElement('ion-button');
+    fresh.className = 'ios';
+    fresh.textContent = 'New action';
+    fresh.style.cssText = child.style.cssText;
+    size(fresh, 10);
+    setVerticalBarsPlacement(fresh, true);
+    modal.querySelector('ion-toolbar')!.append(fresh);
+    window.dispatchEvent(new Event('nativeUIRefresh'));
+    await nextFrame();
+    await nextFrame();
+    expect(snapshots.at(-1).controls.map((c) => c.id)).toEqual(accepted);
+    await nextFrame();
+    activate?.({ id: snapshots.at(-1)!.controls[0].items[0].id, revision: snapshots.at(-1)!.revision, sequence: 2 });
+    await Promise.resolve();
+    expect(clicked).not.toHaveBeenCalled();
+    if (release === 'web') {
+      group.setAttribute('data-native-ui', 'disabled');
+      window.dispatchEvent(new Event('nativeUIRefresh'));
+      await vi.waitFor(() => expect(snapshots.at(-1)?.controls).toEqual([]));
+      await vi.waitFor(() => expect(runtime.getStatus().projected).toBe(0));
+    }
+    modal.dispatchEvent(new Event('ionModalDidDismiss', { bubbles: true }));
+    modal.remove();
+    window.dispatchEvent(new Event('nativeUIRefresh'));
+    await vi.waitFor(() => expect(snapshots.at(-1)?.controls).toEqual([]));
+    for (const snapshot of snapshots) {
+      const ids = new Set(snapshot.controls.map((control) => control.id));
+      expect((snapshot.imageSourceIds ?? []).every((id) => ids.has(id))).toBe(true);
+    }
+  } finally {
+    await runtime.destroy();
+    stop();
   }
 });

@@ -5,6 +5,16 @@ import UIKit
 /// Compact square ancestors approximate the system button surface; this remains
 /// a layout heuristic and invalid measurements fall back to Web CSS.
 enum NativeUIVerticalBarsGeometry {
+    /// Capture and handoff use the same geometry, including lazy AX fallback.
+    static func resolve(in root: UIView, relativeTo webView: UIView, ids: Set<String>, controls: [NativeUIControl]) -> [String: CGRect] {
+        guard let window = root.window, window === webView.window else { return [:] }
+        var result = measure(in: root, relativeTo: webView, ids: ids)
+        for (id, frame) in componentFrames(in: root, relativeTo: webView, controls: controls) where ids.contains(id) && result[id] == nil {
+            result[id] = frame
+        }
+        return result
+    }
+
     static func measure(in root: UIView, relativeTo webView: UIView, ids: Set<String>) -> [String: CGRect] {
         guard let window = root.window, window === webView.window else { return [:] }
         root.layoutIfNeeded()
@@ -83,10 +93,45 @@ enum NativeUIVerticalBarsGeometry {
         var result: [String: CGRect] = [:]
         var offset = 0
         for control in ordered {
+            for (index, item) in control.items.enumerated() { result[item.id] = frames[offset + index] }
+            if control.kind == .backButton { result["BackButton"] = frames[offset] }
+            if control.kind == .tabBar { result["__tabBar"] = frames[offset..<(offset + control.items.count)].reduce(CGRect.null) { $0.union($1) } }
             result[control.id] = frames[offset..<(offset + control.items.count)].reduce(CGRect.null) { $0.union($1) }
             offset += control.items.count
         }
         return result
+    }
+
+    /// Align the first actual toolbar item to the Web guide, retaining its device boundary and bottom layout.
+    @discardableResult
+    static func alignToolbar(_ target: NativeUIVerticalBarToolbar, in root: UIView, relativeTo reference: UIView,
+                             controls: [NativeUIControl], scale: CGFloat) -> Bool {
+        guard let parent = root.superview else { return false }
+        let toolbar = controls.filter { [.button, .buttons, .backButton, .menuButton].contains($0.kind) }
+        let ids = Set(toolbar.flatMap { $0.items.map(\.id) } + ["BackButton"])
+        var frames = componentFrames(in: root, relativeTo: reference, controls: controls)
+        if !ids.subtracting(["BackButton"]).isSubset(of: Set(frames.keys)) {
+            for (id, frame) in resolve(in: root, relativeTo: reference, ids: ids, controls: controls) where frames[id] == nil {
+                frames[id] = frame
+            }
+        }
+        let rects = toolbar.flatMap { control in
+            control.items.compactMap { frames[control.kind == .backButton ? "BackButton" : $0.id] }
+        }
+        guard let first = rects.min(by: { $0.midY < $1.midY }) else { return false }
+        let desired = max(CGFloat(target.centerY) * scale, CGFloat(target.minimumTop) * scale + first.height / 2)
+        let delta = desired - first.midY
+        guard abs(delta) > 0.5 / (reference.window?.screen.scale ?? 1) else { return true }
+        let origin = reference.convert(CGPoint.zero, to: parent)
+        let shifted = reference.convert(CGPoint(x: 0, y: delta), to: parent)
+        let y = root.frame.minY + shifted.y - origin.y
+        let bottom = root.frame.maxY
+        guard y >= 0, bottom > y else { return true }
+        UIView.performWithoutAnimation {
+            root.frame = CGRect(x: root.frame.minX, y: y, width: root.frame.width, height: bottom - y)
+            root.layoutIfNeeded()
+        }
+        return true
     }
 
 }

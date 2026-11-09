@@ -45,7 +45,7 @@
   },
   "dependencies": {
     "@rdlabo/ionic-theme-utils": "0.1.5",
-    "@webview-native-ui/engine": "1.0.3"
+    "@webview-native-ui/engine": "1.0.4"
   },
   "peerDependencies": {
     "@ionic/core": ">=8.8.1 <10"
