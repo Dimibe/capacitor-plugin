@@ -512,22 +512,54 @@ final class NativeUISnapshotTests: XCTestCase {
         XCTAssertEqual(completed, [0, 1, 2, 3])
     }
 
-    @MainActor func testMissingPopoverDisappearanceCancelsPresentationAndSettlesAllWaiters() async {
-        let host = NativeUIOverlayHost(configuration: WKWebViewConfiguration(), options: nil, event: { _ in })
+    @MainActor func testMissingPopoverDisappearanceCancelsPresentationAndSettlesAllWaiters() throws {
+        var scheduled: [(TimeInterval, DispatchWorkItem)] = []
+        let host = NativeUIOverlayHost(configuration: WKWebViewConfiguration(), options: nil,
+                                       scheduleDismissalTimeout: { scheduled.append(($0, $1)) }, event: { _ in })
         host.anchoredVisible = true
-        host.dismissAnchored = {} // No onDisappear callback arrives.
-        var cancelled = false
-        host.cancelAnchored = { cancelled = true }
-        let closed = expectation(description: "Both stop requests finish after cancellation")
-        closed.expectedFulfillmentCount = 2
+        var dismissals = 0
+        host.dismissAnchored = { dismissals += 1 } // No onDisappear callback arrives.
+        var cancellations = 0
+        host.cancelAnchored = { cancellations += 1 }
+        var completions = 0
         for _ in 0..<2 {
             host.dismissPopover(animated: false) {
-                XCTAssertTrue(cancelled)
-                closed.fulfill()
+                XCTAssertEqual(cancellations, 1)
+                completions += 1
             }
         }
-        await fulfillment(of: [closed], timeout: NativeUIOverlayHost.completionTimeout + 2)
+        XCTAssertEqual(dismissals, 1)
+        XCTAssertEqual(completions, 0)
+        XCTAssertEqual(cancellations, 0)
+        XCTAssertEqual(scheduled.count, 1)
+        let (delay, timeout) = try XCTUnwrap(scheduled.first)
+        XCTAssertEqual(delay, 4) // Must precede the five-second JS bridge deadline.
+        timeout.perform() // Advance the deadline without depending on simulator load.
+        XCTAssertEqual(cancellations, 1)
+        XCTAssertEqual(completions, 2)
         XCTAssertFalse(host.anchoredVisible)
+        XCTAssertTrue(timeout.isCancelled)
+        host.presentationDidDisappear() // A late SwiftUI callback must not settle twice.
+        XCTAssertEqual(completions, 2)
+    }
+
+    @MainActor func testPopoverDisappearanceCancelsFallbackDeadline() throws {
+        var timeout: DispatchWorkItem?
+        let host = NativeUIOverlayHost(configuration: WKWebViewConfiguration(), options: nil,
+                                       scheduleDismissalTimeout: { _, work in timeout = work }, event: { _ in })
+        host.anchoredVisible = true
+        host.dismissAnchored = {}
+        var cancellations = 0
+        host.cancelAnchored = { cancellations += 1 }
+        var completions = 0
+        host.dismissPopover(animated: false) { completions += 1 }
+        let work = try XCTUnwrap(timeout)
+        XCTAssertFalse(work.isCancelled)
+        host.presentationDidDisappear()
+        XCTAssertTrue(work.isCancelled)
+        work.perform()
+        XCTAssertEqual(cancellations, 0)
+        XCTAssertEqual(completions, 1)
     }
 
     @MainActor func testDetachingRailSettlesPopoverPresentationAndDismissal() throws {

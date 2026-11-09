@@ -14,6 +14,7 @@ final class NativeUIOverlayHost: UIViewController {
     var disappeared = false
     private var dismissalCompletions: [() -> Void]?
     private var dismissalTimeout: DispatchWorkItem?
+    private let scheduleDismissalTimeout: (TimeInterval, DispatchWorkItem) -> Void
 
     func presentationDidDisappear() {
         // SwiftUI may disappear before (or without) updating isPresented.
@@ -51,7 +52,7 @@ final class NativeUIOverlayHost: UIViewController {
             self.completeDismissal()
         }
         dismissalTimeout = timeout
-        DispatchQueue.main.asyncAfter(deadline: .now() + Self.completionTimeout, execute: timeout)
+        scheduleDismissalTimeout(Self.completionTimeout, timeout)
         if let dismissAnchored {
             if anchoredVisible { dismissAnchored() }
             else { dismissAnchored(); finish() }
@@ -60,7 +61,11 @@ final class NativeUIOverlayHost: UIViewController {
         } else { finish() }
     }
 
-    init(configuration: WKWebViewConfiguration, options: [String: Any]?, event: @escaping (String) -> Void) {
+    init(configuration: WKWebViewConfiguration, options: [String: Any]?,
+         scheduleDismissalTimeout: @escaping (TimeInterval, DispatchWorkItem) -> Void = { delay, work in
+             DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
+         }, event: @escaping (String) -> Void) {
+        self.scheduleDismissalTimeout = scheduleDismissalTimeout
         webView = WKWebView(frame: .zero, configuration: configuration)
         self.event = event
         super.init(nibName: nil, bundle: nil)
