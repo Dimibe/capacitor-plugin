@@ -4,7 +4,6 @@ import type { PluginListenerHandle } from '@capacitor/core';
 
 /**
  * Optional Material roles enrich the theme; Ionic palettes remain sufficient on their own.
- * @experimental The role set may change in future releases.
  */
 export const materialColorRoles = [
   'primary',
@@ -54,12 +53,11 @@ export const materialColorRoles = [
   'onTertiaryFixed',
   'onTertiaryFixedVariant',
 ] as const;
-/** @experimental Material You role names may change in future releases. */
+/** Material role names exposed by the native color scheme. */
 export type MaterialColorRole = (typeof materialColorRoles)[number];
 
 /**
- * Six compatibility inputs; every additional Material role is optional.
- * @experimental The dynamic color payload may change in future releases.
+ * Opaque #RRGGBB colors. Six required inputs; every additional Material role is optional.
  */
 export interface MaterialColorScheme extends Partial<Record<MaterialColorRole, string>> {
   primary: string;
@@ -70,12 +68,12 @@ export interface MaterialColorScheme extends Partial<Record<MaterialColorRole, s
   onSurface: string;
 }
 
-/** @experimental Dynamic color acquisition and its payload may change in future releases. */
+/** Availability and system appearance, with both schemes when supported. */
 export type DynamicColorScheme =
   | { available: false; systemDark: boolean }
   | { available: true; systemDark: boolean; light: MaterialColorScheme; dark: MaterialColorScheme };
 
-/** @experimental Native dynamic color methods and events may change in future releases. */
+/** Native bridge contract used by the public getter and listener. */
 export interface DynamicColorPlugin {
   getDynamicColorScheme(): Promise<DynamicColorScheme>;
   addListener(name: 'dynamicColorSchemeChange', listener: () => void): Promise<PluginListenerHandle>;
@@ -83,7 +81,6 @@ export interface DynamicColorPlugin {
 
 /**
  * Independent of Native UI projection. No wallpaper or storage permission needed.
- * @experimental The API and returned color roles may change in future releases.
  */
 export const getDynamicColorScheme = (): Promise<DynamicColorScheme> => {
   if (Capacitor.getPlatform() !== 'android') {
@@ -93,8 +90,9 @@ export const getDynamicColorScheme = (): Promise<DynamicColorScheme> => {
 };
 
 /**
- * Invalidates the cached schemes after native resume or configuration changes.
- * @experimental The listener API and notification behavior may change in future releases.
+ * Notifies consumers after Android resume or configuration changes.
+ * The callback carries no palette; call getDynamicColorScheme() again.
+ * Returns a removable no-op handle on other platforms.
  */
 export const addDynamicColorListener = async (listener: () => void): Promise<PluginListenerHandle> => {
   if (Capacitor.getPlatform() !== 'android') return { remove: async () => {} };

@@ -34,6 +34,7 @@ Blocking Web overlays can keep prepared images of native buttons, segments, FABs
 | Add a side rail to Ionic while keeping your theme   | [Vertical Bars step by step](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/ionic-vertical-bars)           |
 | Add a side rail without Ionic                       | [HTML rail setup](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/framework-independent)                    |
 | Add native controls to an existing iOS 27 theme app | [Add Native UI to your theme](https://docs.rdlabo.dev/projects/ionic-theme-ios27/docs/add-native-ui)                  |
+| Read Android Material You colors                    | [Android dynamic colors](docs/dynamic-colors.md)                                                                      |
 | Render custom SwiftUI or Android Compose content    | [App-local extensions (experimental)](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/native-ui-extensions) |
 
 ## Install from npm
@@ -126,29 +127,17 @@ Capacitor apps continue to use the `RdlaboCapacitorNativeUi` product and `import
 
 CocoaPods continues to compile the adapter and shared sources into the existing plugin pod. This change does not publish a standalone Core pod or implement a Cordova adapter.
 
-## Android dynamic colors (experimental)
+## Android dynamic colors
 
-> **Experimental:** The dynamic color API, returned color roles, and change
-> notification behavior may change in future releases.
+Read Android 12+ Material You colors with `getDynamicColorScheme()` and observe
+resume/configuration notifications with `addDynamicColorListener()`. Import both
+from `@rdlabo/capacitor-native-ui`. Dynamic colors are a supported, opt-in API,
+independent of Native UI projection and experimental app-local extensions.
 
-The `@rdlabo/capacitor-native-ui` root entrypoint exports
-`getDynamicColorScheme()` and `addDynamicColorListener(listener)`. These work
-independently of Native UI projection. Import them from the package root; the
-experimental `/dynamic-colors` subpath has been removed. Android 12+ returns `{ available: true,
-systemDark, light, dark }`, with supported Material `ColorScheme` roles as opaque `#RRGGBB` colors for
-each scheme, including accent/on-accent/container pairs, surface containers,
-outline, inverse, scrim, and fixed roles. The original six compatibility fields
-remain required in TypeScript; additional roles are optional so consumers can
-accept partial schemes. The OS
-palette is used without changing the Activity theme or requesting wallpaper
-permissions. Other platforms return `{ available: false, systemDark }`.
-
-The listener returns a removable handle and invalidates cached colors on Android
-resume/configuration changes. Fetch again when notified. For Ionic conversion and
-`system` / `light` / `dark` mode control, pass the getter and listener to
+The plugin returns light and dark schemes without changing the Activity theme or
+requesting wallpaper permissions. Other platforms report `available: false`.
+The plugin does not apply CSS; Ionic applications can use
 `enableDynamicColors` from `@rdlabo/ionic-theme-md3/dynamic-colors`.
 
-Ionic themes do not require these extra roles: ionic-theme-md3 derives its default
-component colors from Ionic palettes alone. Material You optionally supplies more
-precise `--md-sys-color-*` overrides, preserving the Material foreground/background
-pairs. No additional native calls are needed for the expanded role set.
+See [Android dynamic colors](docs/dynamic-colors.md) for installation, API contracts,
+change notifications, cleanup, and Ionic integration.
