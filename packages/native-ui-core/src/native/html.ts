@@ -24,16 +24,7 @@ export const readHTMLControl = (element: HTMLElement, id: Identify, options: Nat
   const kind = element.getAttribute('data-native-ui') === 'back-button' ? 'back-button' : 'button';
   const candidate = createCandidate(element, kind, id, options);
   const item = appendItem(candidate, element, id);
-  if (!item) return;
-  const labelledBy = element
-    .getAttribute('aria-labelledby')
-    ?.trim()
-    .split(/\s+/)
-    .map((key) => element.ownerDocument.getElementById(key)?.textContent?.trim() ?? '')
-    .filter(Boolean)
-    .join(' ');
-  item.accessibilityLabel = labelledBy || element.getAttribute('aria-label') || item.label;
-  if (!item.accessibilityLabel) return;
+  if (!item?.accessibilityLabel) return;
   item.disabled ||= element.matches(':disabled, [disabled]') || !!element.closest('[aria-disabled="true"]');
   if (htmlRailSource(element)) candidate.control.placement = 'vertical-bars';
   return candidate;

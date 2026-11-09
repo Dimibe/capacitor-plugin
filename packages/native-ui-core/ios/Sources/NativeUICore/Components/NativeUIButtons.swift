@@ -5,6 +5,9 @@ enum NativeUIButtons {
 
     @available(iOS 26.0, *)
     static func make(_ node: NativeUIControl, scale: CGFloat, rendering: NativeUIControlRendering, activate: @escaping (String) -> Void) -> UIView {
+        if node.pressBlending == true {
+            return NativeUIPressGroup(node, scale: scale, rendering: rendering, activate: activate)
+        }
         let items = node.items
         let rtl = node.rtl
         let effect = UIGlassEffect(style: .regular)

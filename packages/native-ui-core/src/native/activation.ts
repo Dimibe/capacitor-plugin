@@ -382,6 +382,7 @@ export const enableNativeUI = (options: NativeUIRuntimeOptions = {}, overlayFact
             unavailableExtensions,
             coveredSnapshots: capabilities.coveredSnapshots === true,
             nativeScroll: capabilities.nativeScroll === true,
+            pressBlendingMaxItems: capabilities.pressBlendingMaxItems ?? (capabilities.pressBlending ? 2 : 0),
           },
           nativeVerticalBars,
           runtimeStopped,

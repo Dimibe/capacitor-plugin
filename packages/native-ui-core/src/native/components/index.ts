@@ -1,4 +1,4 @@
-import type { VerticalControlAreaOptions } from '../definitions.js';
+import type { NativeUIRuntimeOptions } from '../definitions.js';
 import * as button from './ion-button.js';
 import * as buttons from './ion-buttons.js';
 import * as backButton from './ion-back-button.js';
@@ -37,7 +37,7 @@ export const sourceConfigurationSupported = (element: HTMLElement): boolean => {
   return !element.matches(fab.tag) || fab.sourceConfigurationSupported(element);
 };
 
-export const readCandidate = (element: HTMLElement, id: Identify, options: VerticalControlAreaOptions = {}): Candidate | undefined => {
+export const readCandidate = (element: HTMLElement, id: Identify, options: NativeUIRuntimeOptions = {}): Candidate | undefined => {
   if (!sourceConfigurationSupported(element)) return;
   const verticalBars = isVerticalBarsCandidate(element);
   if (

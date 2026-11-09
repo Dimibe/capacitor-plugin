@@ -56,6 +56,22 @@ export const createCandidate = (
   };
 };
 
+function referencedLabel(host: HTMLElement, native: Element | null | undefined): string | undefined {
+  const source = host.hasAttribute('aria-labelledby') ? host : (native ?? host);
+  const ids = source.getAttribute('aria-labelledby')?.trim();
+  if (!ids) return;
+  const root = source.getRootNode() as Document | ShadowRoot;
+  const hostRoot = host.getRootNode() as Document | ShadowRoot;
+  return ids
+    .split(/\s+/)
+    .map((id) => {
+      const label = root.getElementById(id) ?? hostRoot.getElementById(id);
+      return label?.getAttribute('aria-label')?.trim() || label?.textContent?.trim();
+    })
+    .filter(Boolean)
+    .join(' ');
+}
+
 // Shared text, artwork, geometry and action data; component rules stay with their readers.
 export const appendItem = (
   candidate: Candidate,
@@ -115,9 +131,10 @@ export const appendItem = (
     ...frame(child.getBoundingClientRect(), candidate.element.getBoundingClientRect()),
     label,
     accessibilityLabel:
-      child.getAttribute('aria-label') ??
-      native?.getAttribute('aria-label') ??
-      (icons[0]?.getAttribute('aria-hidden') === 'true' ? null : icons[0]?.getAttribute('aria-label')) ??
+      referencedLabel(child, native) ||
+      child.getAttribute('aria-label')?.trim() ||
+      native?.getAttribute('aria-label')?.trim() ||
+      (icons[0]?.getAttribute('aria-hidden') !== 'true' && icons[0]?.getAttribute('aria-label')?.trim()) ||
       label,
     disabled:
       !!(child as ItemElement).disabled ||

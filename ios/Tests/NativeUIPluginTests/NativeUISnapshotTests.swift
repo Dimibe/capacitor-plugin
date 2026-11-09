@@ -1046,6 +1046,122 @@ final class NativeUISnapshotTests: XCTestCase {
     }
 
     @MainActor
+    func testPressGroupKeepsTargetsSeparateAndUpdatesSpacingOnLayout() throws {
+        guard #available(iOS 26.0, *) else { throw XCTSkip("Requires glass buttons") }
+        let items = [item(["id": "a", "x": 0.0, "y": 0.0, "backgroundColor": "rgb(150, 87, 0)"]),
+                     item(["id": "b", "x": 56.0, "y": 0.0, "borderWidth": 2.0, "borderColor": "rgb(32, 64, 128)"])]
+        let node = try XCTUnwrap(decode([control(["kind": "ion-buttons", "pressBlending": true, "width": 100.0, "items": items])]).controls.first)
+        XCTAssertTrue(node.isValid)
+        var taps: [String] = []
+        let pair = try XCTUnwrap(NativeUIButtons.make(node, scale: 1, rendering: NativeUIControlRendering()) { taps.append($0) } as? NativeUIPressGroup)
+        pair.frame = node.frame.rect
+        pair.layoutIfNeeded()
+        let surfaces = pair.contentView.subviews.compactMap { $0 as? UIVisualEffectView }
+        let buttons = surfaces.compactMap { $0.contentView.subviews.first as? UIButton }
+        XCTAssertEqual(buttons.count, 2)
+        XCTAssertEqual((surfaces.first?.effect as? UIGlassEffect)?.tintColor, NativeUIRendering.color("rgb(150, 87, 0)"))
+        XCTAssertNil((surfaces.last?.effect as? UIGlassEffect)?.tintColor)
+        XCTAssertEqual(surfaces[1].layer.borderWidth, 2)
+        XCTAssertEqual(surfaces[1].layer.borderColor, NativeUIRendering.color("rgb(32, 64, 128)").cgColor)
+        XCTAssertFalse(pair.point(inside: CGPoint(x: 50, y: 22), with: nil))
+        XCTAssertEqual((pair.effect as? UIGlassContainerEffect)?.spacing, 12)
+        for button in buttons {
+            button.sendActions(for: .touchUpInside)
+        }
+        XCTAssertEqual(taps, ["a", "b"])
+        XCTAssertEqual(surfaces.map(\.frame), node.items.map { $0.frame.rect })
+        let changed = try XCTUnwrap(decode([control(["kind": "ion-buttons", "pressBlending": true, "width": 100.0, "items": [
+            item(["id": "a", "x": 0.0, "y": 0.0, "disabled": true]), item(["id": "b", "x": 50.0, "y": 0.0])
+        ]])]).controls.first)
+        pair.update(changed, scale: 1, rendering: NativeUIControlRendering()) { taps.append($0) }
+        XCTAssertTrue(surfaces[0].contentView.subviews.contains { $0 === buttons[0] })
+        XCTAssertFalse(buttons[0].isEnabled)
+        XCTAssertEqual(surfaces[1].layer.borderWidth, 0)
+        XCTAssertNil(surfaces[1].layer.borderColor)
+        XCTAssertEqual((pair.effect as? UIGlassContainerEffect)?.spacing, 6)
+        XCTAssertEqual(taps, ["a", "b"])
+    }
+
+    @MainActor
+    func testPressGroupRetainsButtonsAndTheirSurfacesWhenSiblingsChange() throws {
+        guard #available(iOS 26.0, *) else { throw XCTSkip("Requires glass buttons") }
+        func snapshot(_ ids: [String]) throws -> NativeUIControl {
+            let items = ids.enumerated().map { index, id in
+                item(["id": id, "x": Double(index * 50), "y": 0.0, "accessibilityLabel": id])
+            }
+            return try XCTUnwrap(decode([control(["kind": "ion-buttons", "pressBlending": true, "width": 150.0,
+                                                   "items": items])]).controls.first)
+        }
+        var taps: [String] = []
+        let rendering = NativeUIControlRendering()
+        let group = try NativeUIPressGroup(snapshot(["share", "more"]), scale: 1, rendering: rendering) { taps.append($0) }
+        func buttons() throws -> [UIButton] { try XCTUnwrap(group.accessibilityElements as? [UIButton]) }
+        let original = try buttons()
+        let share = original[0], more = original[1]
+        let shareSurface = try XCTUnwrap(group.contentView.subviews.first { share.isDescendant(of: $0) })
+        try group.update(snapshot(["edit", "more", "share"]), scale: 1, rendering: rendering) { taps.append($0) }
+        let expanded = try buttons()
+        XCTAssertEqual(expanded.map(\.accessibilityLabel), ["edit", "more", "share"])
+        XCTAssertTrue(expanded[1] === more)
+        XCTAssertTrue(expanded[2] === share)
+        XCTAssertTrue(share.isDescendant(of: shareSurface))
+        XCTAssertTrue(shareSurface.superview === group.contentView)
+        XCTAssertEqual(shareSurface.frame.minX, 100)
+        let edit = expanded[0]
+        for button in expanded { button.sendActions(for: .touchUpInside) }
+        try group.update(snapshot(["share", "more"]), scale: 1, rendering: rendering) { taps.append($0) }
+        let remaining = try buttons()
+        XCTAssertTrue(remaining[0] === share)
+        XCTAssertTrue(remaining[1] === more)
+        XCTAssertTrue(shareSurface.superview === group.contentView)
+        XCTAssertFalse(edit.isDescendant(of: group))
+        remaining[0].sendActions(for: .touchUpInside)
+        XCTAssertEqual(taps, ["edit", "more", "share", "share"])
+    }
+
+    @MainActor
+    func testPressGroupUsesOneSpacingForUnequalGapsAndIndependentActions() throws {
+        guard #available(iOS 26.0, *) else { throw XCTSkip("Requires glass buttons") }
+        let items = [124.0, 50.0, 0.0].enumerated().map { i, x in
+            item(["id": "action-\(i)", "x": x, "y": 0.0])
+        }
+        let node = try XCTUnwrap(decode([control(["kind": "ion-buttons", "pressBlending": true, "width": 168.0,
+                                                  "rtl": true, "items": items])]).controls.first)
+        XCTAssertTrue(node.isValid)
+        var taps: [String] = []
+        let group = try XCTUnwrap(NativeUIButtons.make(node, scale: 1, rendering: NativeUIControlRendering()) { taps.append($0) } as? NativeUIPressGroup)
+        let surfaces = group.contentView.subviews.compactMap { $0 as? UIVisualEffectView }
+        let buttons = surfaces.compactMap { $0.contentView.subviews.first as? UIButton }
+        XCTAssertEqual(surfaces.map(\.frame), node.items.map { $0.frame.rect })
+        XCTAssertEqual(buttons.count, 3)
+        XCTAssertEqual((group.effect as? UIGlassContainerEffect)?.spacing, 6)
+        buttons[1].sendActions(for: .touchDown)
+        buttons[1].sendActions(for: .touchCancel)
+        XCTAssertTrue(taps.isEmpty)
+        for button in buttons {
+            button.sendActions(for: .touchUpInside)
+        }
+        XCTAssertEqual(taps, items.indices.map { "action-\($0)" })
+    }
+
+    @MainActor
+    func testPressGroupSpacingAcrossWrappedLayouts() throws {
+        guard #available(iOS 26.0, *) else { throw XCTSkip("Requires glass buttons") }
+        for (origin, expected) in [(CGPoint(x: 0, y: 54), 10.0), (CGPoint(x: 47, y: 48), 5.0), (CGPoint(x: 0, y: 44), 0.0)] {
+            let items = [item(["id": "a", "x": 0.0, "y": 0.0]), item(["id": "b", "x": 144.0, "y": 0.0]),
+                         item(["id": "c", "x": Double(origin.x), "y": Double(origin.y)])]
+            let node = try XCTUnwrap(decode([control(["kind": "ion-buttons", "pressBlending": true, "width": 188.0,
+                                                      "height": 100.0, "items": items])]).controls.first)
+            let group = try XCTUnwrap(NativeUIButtons.make(node, scale: 2, rendering: NativeUIControlRendering()) { _ in } as? NativeUIPressGroup)
+            group.frame = CGRect(x: 0, y: 0, width: 376, height: 200)
+            group.layoutIfNeeded()
+            XCTAssertEqual((group.effect as? UIGlassContainerEffect)?.spacing, CGFloat(expected) * 2)
+            XCTAssertTrue(group.point(inside: CGPoint(x: 2 * origin.x + 44, y: 2 * origin.y + 44), with: nil))
+            XCTAssertFalse(group.point(inside: CGPoint(x: 240, y: 160), with: nil))
+        }
+    }
+
+    @MainActor
     func testClearStandaloneToolbarButtonHasNoGlassBackground() throws {
         guard #available(iOS 26.0, *) else { throw XCTSkip("Requires glass buttons") }
         let node = try XCTUnwrap(decode([control(["kind": "ion-button", "items": [item(["label": "Cancel", "buttonFill": "clear"]) ]])]).controls.first)

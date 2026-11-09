@@ -42,7 +42,7 @@ export const assignToolbarTransitionIds = (candidates: Candidate[]): void => {
     );
     identities.push({
       target: control,
-      id: surfaceId,
+      id: control.pressBlending ? JSON.stringify(['press-group', control.id]) : surfaceId,
       fallback: control.id,
     });
     for (const [index, item] of control.items.entries()) {

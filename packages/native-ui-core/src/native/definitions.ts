@@ -66,6 +66,7 @@ export interface NativeUIRuntimeOptions extends NativeUIOptions {
   /** @internal Negotiated native support; absent on older binaries. */
   coveredSnapshots?: boolean;
   nativeScroll?: boolean;
+  pressBlendingMaxItems?: number;
   unavailableExtensions?: ReadonlyMap<string, string>;
   rail?: { host: HTMLElement; edge: 'left' | 'right' };
 }
@@ -193,6 +194,7 @@ export interface NativeUIScrollPlacement {
 }
 
 export interface NativeUIControl extends Frame {
+  pressBlending?: true;
   id: string;
   /** Stable toolbar group identity, independent of the source control ID. */
   transitionId?: string;
@@ -297,6 +299,8 @@ export interface NativeUIPlugin {
     connectionState?: boolean;
     coveredSnapshots?: boolean;
     nativeScroll?: boolean;
+    pressBlending?: boolean;
+    pressBlendingMaxItems?: number;
   }>;
   coveredSnapshot?: WebProjectionTransport['send'];
   completeExtensionAction(options: { requestId: string; accepted: boolean }): Promise<void>;

@@ -98,12 +98,14 @@ struct NativeUIFrame: Decodable, Equatable {
 }
 
 struct NativeUIControl: Decodable, Equatable {
+    static let maxItems = 30
     enum Placement: String, Decodable { case verticalBars = "vertical-bars" }
     enum ToolbarSlot: String, Decodable { case start, end }
     let id: String
     let kind: NativeUIComponent
     let placement: Placement?
     let toolbarSlot: ToolbarSlot?
+    let pressBlending: Bool?
     let transitionId: String?
     let frame: NativeUIFrame
     let items: [NativeUIItem]
@@ -116,7 +118,7 @@ struct NativeUIControl: Decodable, Equatable {
     let scroll: NativeUIScrollPlacement?
 
     private enum CodingKeys: String, CodingKey {
-        case id, kind, placement, toolbarSlot, transitionId, items, dark, rtl, tabBarAnchor, tabTint, search
+        case id, kind, placement, toolbarSlot, pressBlending, transitionId, items, dark, rtl, tabBarAnchor, tabTint, search
         case scroll
         case extensionContent = "extension"
     }
@@ -126,6 +128,7 @@ struct NativeUIControl: Decodable, Equatable {
         id = try values.decode(String.self, forKey: .id)
         kind = try values.decode(NativeUIComponent.self, forKey: .kind)
         placement = try values.decodeIfPresent(Placement.self, forKey: .placement)
+        pressBlending = try values.decodeIfPresent(Bool.self, forKey: .pressBlending)
         toolbarSlot = try values.decodeIfPresent(ToolbarSlot.self, forKey: .toolbarSlot)
         transitionId = try values.decodeIfPresent(String.self, forKey: .transitionId)
         frame = try NativeUIFrame(from: decoder)
@@ -140,12 +143,13 @@ struct NativeUIControl: Decodable, Equatable {
     }
 
     var isValid: Bool {
+        if pressBlending == true && (kind != .buttons || placement != nil || items.count < 2) { return false }
         if kind == .extension {
             return !id.isEmpty && frame.isValid && items.isEmpty && placement == nil && toolbarSlot == nil &&
                 search == nil && tabBarAnchor == nil && extensionContent?.isValid == true &&
                 (scroll.map { $0.isValid && extensionContent?.tabBarId == nil } ?? true)
         }
-        return scroll == nil && extensionContent == nil && NativeUIComponents.supported.contains(kind) && !id.isEmpty && frame.isValid && !items.isEmpty && items.count <= 30 &&
+        return scroll == nil && extensionContent == nil && NativeUIComponents.supported.contains(kind) && !id.isEmpty && frame.isValid && !items.isEmpty && items.count <= Self.maxItems &&
         (!NativeUIButton.kinds.contains(kind) || items.count == 1) &&
         (toolbarSlot == nil || (placement == .verticalBars && [.button, .buttons, .menuButton].contains(kind))) &&
         Set(items.map(\.id)).count == items.count && items.allSatisfy(\.isValid) &&

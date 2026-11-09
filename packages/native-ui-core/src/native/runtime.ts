@@ -13,6 +13,7 @@ import { createCoveredSnapshots, type CoveredSnapshots } from './shared/covered-
 import { createTabBarWidths, tabWidthMeasuring } from './shared/tab-bar-width.js';
 import { createVerticalNavigation } from './shared/vertical-navigation.js';
 import { createHorizontalNavigation, horizontalToolbar, navigationMarker } from './shared/horizontal-navigation.js';
+import { withoutPressGroupChildren } from './components/ion-buttons.js';
 import { assignToolbarTransitionIds } from './shared/transition-identity.js';
 import { controlSelected } from './shared/control-options.js';
 import { createDiagnostics } from './shared/diagnostics.js';
@@ -577,7 +578,7 @@ export const createRuntime = async (
     );
     // An extension owns its entire source subtree. Never project a nested built-in twice.
     const extensionSources = candidates.filter((candidate) => candidate.control.kind === 'extension');
-    const exclusive = candidates.filter((candidate) => {
+    const exclusive = withoutPressGroupChildren(candidates).filter((candidate) => {
       if (extensionSources.some((owner) => owner !== candidate && owner.element.contains(candidate.element))) return false;
       const tabBarId = candidate.control.extension?.tabBarId;
       if (!tabBarId) return true;
@@ -1274,17 +1275,19 @@ export const createRuntime = async (
     page.style.setProperty('pointer-events', 'auto', 'important');
     try {
       const withinPage = (element: HTMLElement) => page.contains(element) || element.contains(page);
-      const candidates = navigation.measure(
-        () =>
-          unprojected(Array.from(nativeOwners.keys()).filter(withinPage), () =>
-            // Only fixed toolbar controls participate in this handoff. Avoid measuring
-            // content controls that will be discarded by horizontalToolbar below.
-            Array.from(page.querySelectorAll<HTMLElement>(discovery))
-              .filter(inFixedToolbar)
-              .map(readEnabledCandidate)
-              .filter((candidate): candidate is Candidate => !!candidate && horizontalToolbar(candidate)),
-          ),
-        withinPage,
+      const candidates = withoutPressGroupChildren(
+        navigation.measure(
+          () =>
+            unprojected(Array.from(nativeOwners.keys()).filter(withinPage), () =>
+              // Only fixed toolbar controls participate in this handoff. Avoid measuring
+              // content controls that will be discarded by horizontalToolbar below.
+              Array.from(page.querySelectorAll<HTMLElement>(discovery))
+                .filter(inFixedToolbar)
+                .map(readEnabledCandidate)
+                .filter((candidate): candidate is Candidate => !!candidate && horizontalToolbar(candidate)),
+            ),
+          withinPage,
+        ),
       );
       assignToolbarTransitionIds(candidates);
       navigation.current.destination = candidates;

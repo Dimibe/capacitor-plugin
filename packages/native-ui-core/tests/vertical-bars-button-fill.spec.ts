@@ -191,6 +191,7 @@ test.each(['source', 'system'] as const)('local projection overrides button, gro
 
 test('horizontal controls project without theme variables and retain visibility exclusions', () => {
   const button = mount([undefined]);
+  button.setAttribute('aria-label', 'Add');
   document.querySelector('ion-app')!.className = '';
   button.classList.add('ios');
   // jsdom leaves the default transform empty instead of the browser's 'none'.

@@ -127,7 +127,7 @@ The table below describes the ordinary Native UI. Vertical Bars uses the separat
 | `ion-segment`                                 | Fixed toolbar, non-scrollable, text **or** one icon per item                                              | `UISegmentedControl`                                                  |
 | `ion-fab` / `ion-fab-button` / `ion-fab-list` | Glass FAB in an `ion-content` fixed slot; one main button and optional directional lists                  | Persistent glass `UIButton` per button; one FAB synchronization group |
 
-Solid submit actions (`fill="solid"` with `type="submit"` or `.button-submit`) also support Ionic `color`, such as `color="primary"`. Their prominent glass tint comes from the resolved Web background color. In a mixed `ion-buttons` container, they project individually rather than joining a shared glass surface. The existing color restriction for other individually projected horizontal `ion-button` actions remains unchanged.
+Solid submit actions (`fill="solid"` with `type="submit"` or `.button-submit`) also support Ionic `color`, such as `color="primary"`. Their prominent glass tint comes from the resolved Web background color. In a fixed horizontal header, adjacent non-clear buttons can [blend with the solid action on press](#ordinary-button-grouping). Otherwise eligible mixed actions project individually. The existing color restriction for other individually projected horizontal `ion-button` actions remains unchanged.
 
 For the ordinary Native UI, only supported iOS-mode components are eligible. Theme variables are not required; calling `enableNativeUI()` opts into native projection. Explicitly enabled Vertical Bars is mode-independent as described below. `ios-theme-disabled` and the legacy `ios26-disabled` on an element or ancestor always exclude it. A disabled theme on one tab/segment item keeps its whole group on the Web.
 
@@ -178,14 +178,19 @@ The native bar uses local compact horizontal and regular vertical size classes w
 
 These rules apply outside Vertical Bars:
 
-| Source or setting                                            | Result                                                                                                            |
-| ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
-| Clear button inside `ion-buttons`                            | Can project individually.                                                                                         |
-| Standalone clear, solid or outline button                    | Stays on the Web.                                                                                                 |
-| Grouping enabled with two or more eligible clear buttons     | One native surface with separate actions. Menu buttons can join.                                                  |
-| Single menu button                                           | Uses its parent group as the surface.                                                                             |
-| Grouping disabled, mixed fills or unsupported group children | Eligible actions can still project individually. Explicit subtree opt-outs follow the shared-surface rules above. |
-| Back button                                                  | Never joins an ordinary action group.                                                                             |
+| Source or setting                                                  | Result                                                                                                            |
+| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| Clear button inside `ion-buttons`                                  | Can project individually.                                                                                         |
+| Standalone clear, solid or outline button                          | Stays on the Web.                                                                                                 |
+| Grouping enabled with two or more eligible clear buttons           | One native surface with separate actions. Menu buttons can join.                                                  |
+| Two or more non-clear buttons in the same header group             | Individual glass surfaces inside one native glass container.                                                      |
+| Single menu button                                                 | Uses its parent group as the surface.                                                                             |
+| Grouping disabled, other mixed fills or unsupported group children | Eligible actions can still project individually. Explicit subtree opt-outs follow the shared-surface rules above. |
+| Back button                                                        | Never joins an ordinary action group.                                                                             |
+
+In a fixed horizontal header, two or more `ion-button` children of the same `ion-buttons` share a native glass container when every button has a non-clear fill. Any combination of `default`, `solid` and `outline` qualifies. An omitted fill resolves to `clear` inside `ion-buttons`. Each retains its measured frame, accessibility label and action. Solid glass takes its tint and foreground from the resolved Web button colors. Outline glass uses the resolved Web border color and width. The plugin sets the container spacing to the shortest distance between any two button frames, including across wrapped rows. UIKit handles the press response and blends nearby glass as the pressed surface grows. Two clear buttons still share one capsule at rest.
+
+Each action needs an accessible name and a tap target fully visible inside the group and its clipping ancestors. Icon-only actions can use `aria-label` or `aria-labelledby`. Tap targets may touch at their edges. If the group is ineligible, each action follows its individual projection rules. While the group stays projected, adding, removing or reordering a sibling preserves the native button for each surviving action ID. Custom transition IDs, unsupported content, other fill combinations, Vertical Bars and older native binaries use the existing rendering rules. Use the existing `data-horizontal-bars="false"` on `ion-buttons` to keep individual button presentation.
 
 ### Unsupported content
 

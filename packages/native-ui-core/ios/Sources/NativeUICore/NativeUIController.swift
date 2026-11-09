@@ -230,7 +230,7 @@ public final class NativeUIController: NSObject, UITabBarDelegate {
                         effect.isHidden = true
                         self.restoreTopEdge = { [weak effect] in effect?.isHidden = hidden }
                     }
-                    call.resolve(["supported": true, "extensions": NativeUI.names, "modalAnimation": true, "connectionState": true, "coveredSnapshots": true, "nativeScroll": true])
+                    call.resolve(["supported": true, "extensions": NativeUI.names, "modalAnimation": true, "connectionState": true, "coveredSnapshots": true, "nativeScroll": true, "pressBlending": true, "pressBlendingMaxItems": NativeUIControl.maxItems])
                 }
                 else { call.resolve(["supported": false]) }
             }
@@ -708,6 +708,8 @@ public final class NativeUIController: NSObject, UITabBarDelegate {
                             if fab.superview == nil { host.addSubview(fab) }
                             self.controls[id] = fab
                             fabs.append((fab, node))
+                        } else if node.pressBlending == true, let group = self.controls[id] as? NativeUIPressGroup {
+                            group.update(node, scale: scale, rendering: self.rendering, activate: { [weak self] id in self?.activate(id) })
                         } else if NativeUIButton.kinds.contains(node.kind), let button = self.controls[id] as? UIButton {
                             _ = NativeUIButton.make(node, existing: button, rendering: self.rendering,
                                                     activate: { [weak self] id in self?.activate(id) })
