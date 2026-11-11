@@ -47,7 +47,23 @@ import { enableNativeUI } from '@rdlabo/capacitor-native-ui';
 await enableNativeUI();
 ```
 
-For Angular, call this after `bootstrapApplication` resolves. For React or Vue, call it after the app shell renders. Connect Foldable's initial layout and `layoutChange` notifications through `resolveVerticalBarsLayout` and the theme's `setVerticalBarsLayout`; see [startup and device layout examples](device-layout.md).
+In the same standard setup, connect device layout after `ion-app` renders. This enables iPhone Duo / Vertical Bars spacing and updates it when the active display changes:
+
+```ts
+import { Foldable } from '@erkamyaman/capacitor-foldable';
+import { resolveVerticalBarsLayout } from '@rdlabo/capacitor-native-ui/integration';
+import { setVerticalBarsLayout } from '@rdlabo/ionic-theme-ios27';
+
+const updateLayout = async () => {
+  setVerticalBarsLayout(await resolveVerticalBarsLayout(Foldable));
+};
+
+void Foldable.addListener('layoutChange', () => void updateLayout().catch(console.error))
+  .then(updateLayout)
+  .catch(console.error);
+```
+
+For Angular, call `enableNativeUI()` after `bootstrapApplication` resolves, and place the layout code in the app shell’s existing `afterNextRender` callback. For React or Vue, run both after the app shell renders. These steps include ordinary controls and device-adaptive Vertical Bars; no additional rail option is needed.
 
 ## 4. Build, sync, and run
 
