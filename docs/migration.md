@@ -4,6 +4,22 @@ title: Migration
 
 # Migration
 
+## Simplify an existing iOS setup
+
+Earlier guide examples included application scaffolding that is unnecessary for the standard setup. Follow [the current installation guide](setup.md) when starting a new application.
+
+| Earlier guide approach                                                               | Standard setup                                                                                                                         |
+| ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Module-global `mountNativeUI()` lifecycle queue or native startup in page components | Start one default `enableNativeUI()` runtime from the application owner and dispose it with that owner.                                |
+| Handwritten page switches or a second navigation wrapper                             | Keep the application's Ionic routes; `ios27ThemeConfig` supplies the coordinated transition.                                           |
+| `controls: 'verticalOnly'` as installation boilerplate                               | Omit the option to enable ordinary controls and Vertical Bars together. Keep it only for an intentional rail-only selection.           |
+| Direct `getBarPlacement()` mapping with `barPlacementChange` alone                   | Connect `layoutChange` through `resolveVerticalBarsLayout(Foldable)` in the [device module](device-layout.md), including `toolbarTop`. |
+| Fixed `edge: 'trailing'` in device setup                                             | Use device-reported placement. Fixed placement is for an intentional browser preview.                                                  |
+
+Keep existing state and business handlers in the application. When replacing guide scaffolding, stop its old runtime and remove its device listener before starting the new owner. Keep a single device connection and a single Native UI runtime. Applications retaining a custom Web theme use [the existing-theme guide](ionic-vertical-bars.md).
+
+The selection, suspension and custom-navigation APIs remain available for applications that need them; they are reference APIs rather than installation prerequisites. The device-provider APIs remain valid; the resolver composes them instead of treating an edge-only notification as a complete layout update.
+
 ## Upgrading from 2.1.0
 
 This section covers the same upgrade in both the theme and Native UI guides; following either one is sufficient. Keep existing theme imports, stylesheets and animation setup. Native UI remains optional. If enabled, keep your existing `enableNativeUI()` call, control selection and application-root runtime. The older package-separation migration below does not need to be repeated.
@@ -47,7 +63,7 @@ If your app maps `getBarPlacement()` directly into `setVerticalBarsLayout({ edge
 
 Replace the old placement listener rather than adding a second update path. Keep `await listener.remove()` in the existing application teardown. If you already have a `layoutChange` handler, put the resolver call there. Keep existing `foldStateChange` / `applyFoldStateClasses` wiring for posture; the resolver only supplies rail geometry.
 
-Use the reported rail layout directly, without gating it on `isDeviceFoldable()`, a device name or viewport-size heuristics. Remove fixed toolbar-top workarounds used to imitate device geometry. Intentional application CSS overrides remain supported. Defaults stay in the theme's `setVerticalBarsLayout`, not the resolver. The theme's outer-display default is 174px; reported device geometry can supply the inner-display origin, 124px. See [layout values and fallback behavior](https://docs.rdlabo.dev/projects/ionic-theme-ios27/docs/vertical-bars-layout#apply-device-layout-values).
+Use the reported rail layout directly, without gating it on `isDeviceFoldable()`, a device name or viewport-size heuristics. Remove fixed toolbar-top workarounds used to imitate device geometry. Intentional application CSS overrides remain supported. Defaults stay in the theme's `setVerticalBarsLayout`, not the resolver. The theme's outer-display default is 174px; reported device geometry can supply the inner-display origin, 124px. See [layout values and fallback behavior](https://webview-native-ui.com/projects/ionic-theme-ios27/docs/vertical-bars-layout#apply-device-layout-values).
 
 ### Modal fixes and submit appearance
 
@@ -72,11 +88,11 @@ This guide is for applications using `@rdlabo/ionic-theme-ios27` **1.2.1**, incl
 - **Theme only:** update the theme package. Existing theme imports, CSS/Sass paths and animation imports remain valid; no native startup is needed.
 - **Native UI or Vertical Control Area:** install the native package directly, replace imports and startup settings below, then sync Capacitor and rebuild the native app.
 
-Native UI graduates from Preview to official support in 2.0.0. Experimental Extensions are documented in the [current extension guide](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/native-ui-extensions); this guide covers the published 1.2.1 controls and setup.
+Native UI graduates from Preview to official support in 2.0.0. Experimental Extensions are documented in the [current extension guide](https://webview-native-ui.com/projects/capacitor-native-ui/docs/native-ui-extensions); this guide covers the published 1.2.1 controls and setup.
 
 ## Native UI package separation
 
-For a new native integration, follow [Native UI setup](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/setup) or, if you already use the iOS theme, [Add Native UI to your theme](https://docs.rdlabo.dev/projects/ionic-theme-ios27/docs/add-native-ui). The steps below cover existing applications migrating package names and native projects.
+For a new native integration, follow [Native UI setup](https://webview-native-ui.com/projects/capacitor-native-ui/docs/setup) or, if you already use the iOS theme, [Add Native UI to your theme](https://webview-native-ui.com/projects/ionic-theme-ios27/docs/add-native-ui). The steps below cover existing applications migrating package names and native projects.
 
 The theme and native controls now live in separate packages. Choose dependencies by the behavior your app uses:
 
@@ -86,7 +102,7 @@ The theme and native controls now live in separate packages. Choose dependencies
 | Native UI or standalone Vertical Control Area          | `@rdlabo/capacitor-native-ui` |
 | Theme styling together with native controls            | Both packages                 |
 
-The theme owns the appearance and behavior of Ionic's Web elements. Native UI owns projecting supported controls into native iOS views and coordinating their lifecycle with Web navigation. Native UI can be used without the iOS 27 theme; installing it does not apply theme styles. Standard controls on Android and browsers retain Web presentation; Android can render [app-local Compose extensions](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/native-ui-extensions#2b-register-compose-content-on-android).
+The theme owns the appearance and behavior of Ionic's Web elements. Native UI owns projecting supported controls into native iOS views and coordinating their lifecycle with Web navigation. Native UI can be used without the iOS 27 theme; installing it does not apply theme styles. Standard controls on Android and browsers retain Web presentation; Android can render [app-local Compose extensions](https://webview-native-ui.com/projects/capacitor-native-ui/docs/native-ui-extensions#2b-register-compose-content-on-android).
 
 The theme uses the native package's shared transition/search integration internally. This dependency does not enable native controls automatically. Apps using native controls must declare the native package directly so Capacitor can discover the plugin.
 
@@ -106,7 +122,7 @@ For apps using both the theme and native controls, install both as direct applic
 npm install @rdlabo/ionic-theme-ios27 @rdlabo/capacitor-native-ui @erkamyaman/capacitor-foldable
 ```
 
-For native controls with your existing Web appearance, follow [Native UI only](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/setup). Install the native package directly and keep your existing Web styles. The plugin no longer requires theme variables to select supported controls; Web layout remains the responsibility of your app or theme. Native startup requires Capacitor 8. The Ionic adapter requires Ionic 8.8.1 or later within Ionic 8 or 9; the `/core` entry does not require Ionic.
+For native controls with your existing Web appearance, follow [Native UI only](https://webview-native-ui.com/projects/capacitor-native-ui/docs/setup). Install the native package directly and keep your existing Web styles. The plugin no longer requires theme variables to select supported controls; Web layout remains the responsibility of your app or theme. Native startup requires Capacitor 8. The Ionic adapter requires Ionic 8.8.1 or later within Ionic 8 or 9; the `/core` entry does not require Ionic.
 
 ### 2. Replace native imports
 
@@ -166,8 +182,8 @@ The Ionic transition adapter now belongs to `@rdlabo/ionic-theme-ios27`. Replace
 
 Use `withNativeUITransition()` to keep your existing Ionic navigation animation while coordinating Native UI controls.
 
-- If you already import `iosTransitionAnimation` from `@rdlabo/ionic-theme-ios27`, keep the [package animation setup](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/ionic-vertical-bars#use-the-themes-ios-animation); no configuration change is needed. It now uses the shared adapter internally; do not add another wrapper.
-- If you use Ionic's default animation without a `navAnimation` option, follow [Keep Ionic's default animation](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/ionic-vertical-bars#keep-ionics-default-animation). The example selects Ionic's standard iOS or MD builder from the transition mode.
+- If you already import `iosTransitionAnimation` from `@rdlabo/ionic-theme-ios27`, keep the [package animation setup](https://webview-native-ui.com/projects/capacitor-native-ui/docs/ionic-vertical-bars#use-the-themes-ios-animation); no configuration change is needed. It now uses the shared adapter internally; do not add another wrapper.
+- If you use Ionic's default animation without a `navAnimation` option, follow [Keep Ionic's default animation](https://webview-native-ui.com/projects/capacitor-native-ui/docs/ionic-vertical-bars#keep-ionics-default-animation). The example selects Ionic's standard iOS or MD builder from the transition mode.
 - If you use a custom navigation animation with Native UI or the standalone Vertical Control Area, wrap your existing builder when configuring Ionic:
 
 ```diff
@@ -183,7 +199,7 @@ Merge this option into your existing Ionic configuration before initialization. 
 
 Use the adapter only for navigation; leave modal and popover animations unchanged. Your builder must create a fresh `Animation` for each navigation because Ionic destroys it afterward. Keep lifecycle events for control registration and transitions without animation. If the custom builder animates a horizontal back button separately, exclude that effect while `.ios-theme-vertical-bars` is active.
 
-See [Connect your navigation animation](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/ionic-vertical-bars#2-connect-your-navigation-animation) for the setup and supported scope.
+See [Connect your navigation animation](https://webview-native-ui.com/projects/capacitor-native-ui/docs/ionic-vertical-bars#2-connect-your-navigation-animation) for the setup and supported scope.
 
 ## Startup options
 
@@ -238,7 +254,7 @@ const shell = await enableNativeUI({ controls: 'verticalOnly' });
 
 These are selection defaults, not a hard projection scope. Explicit `data-native-ui` sources and local `data-horizontal-bars="true"` / `data-vertical-bars="true"` can opt in even when a matching default is `false`. Remove the explicit marker or use `data-native-ui="disabled"` to leave an individual source on the Web. `ionic.auto: false` disables automatic Ionic discovery, including local layout opt-ins, but leaves explicit source declarations enabled.
 
-`buttonGroup` controls grouping only. It does not select children: `buttonGroup: true, button: false` projects no ordinary action without explicit selection. `backButton` controls back navigation independently, including inside an `ion-buttons` container. See [all settings](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/configuration) for the complete selection matrix and [toolbar grouping](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/native-ui#toolbar-selection-and-grouping) for local overrides.
+`buttonGroup` controls grouping only. It does not select children: `buttonGroup: true, button: false` projects no ordinary action without explicit selection. `backButton` controls back navigation independently, including inside an `ion-buttons` container. See [all settings](https://webview-native-ui.com/projects/capacitor-native-ui/docs/configuration) for the complete selection matrix and [toolbar grouping](https://webview-native-ui.com/projects/capacitor-native-ui/docs/native-ui#toolbar-selection-and-grouping) for local overrides.
 
 ## Web layout ownership
 

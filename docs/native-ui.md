@@ -4,29 +4,29 @@ title: Native UI
 
 # Native UI
 
-Native UI is **officially supported starting with 2.0.0**. The earlier Native UI Shell Preview was bundled with theme versions 1.2.0 and 1.2.1; this guide describes the split package and its renamed API. See [migration](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/migration#native-ui-naming-changes). App-local [extensions](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/native-ui-extensions) remain experimental.
+Native UI projects supported Web controls into native presentation. App-local [extensions](native-ui-extensions.md) remain experimental.
 
 Native UI gives an Ionic app native navigation and action controls around its Web content. The optional Capacitor iOS plugin renders supported fixed Ionic controls with UIKit or SwiftUI and the system's Liquid Glass material. Page content, scrolling, application state and routing remain in Ionic's WebView.
 
-Read [how projection works](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/readme#how-projection-works) for the shared DOM and native presentation model. Use this page as the supported-control and API reference. For first-time installation and a working example, start with [Ionic setup](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/setup) or [HTML setup](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/framework-independent).
+Read [how projection works](https://webview-native-ui.com/projects/capacitor-native-ui/docs/readme#how-projection-works) for the shared DOM and native presentation model. Use this page as the supported-control and API reference. For first-time installation and a working example, start with [Ionic setup](https://webview-native-ui.com/projects/capacitor-native-ui/docs/setup) or [HTML setup](https://webview-native-ui.com/projects/capacitor-native-ui/docs/framework-independent).
 
 ## Enable Native UI
 
-Already using the iOS theme? Follow [Add Native UI to your theme](https://docs.rdlabo.dev/projects/ionic-theme-ios27/docs/add-native-ui). For other Web appearances, use [Native UI setup](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/setup).
+Already using the iOS theme? Follow [Add Native UI to your theme](https://webview-native-ui.com/projects/ionic-theme-ios27/docs/add-native-ui). For other Web appearances, use [Native UI setup](https://webview-native-ui.com/projects/capacitor-native-ui/docs/setup).
 
 Install the native package as a direct application dependency so Capacitor can discover it:
 
 ```bash
-npm install @rdlabo/capacitor-native-ui @erkamyaman/capacitor-foldable
+npm install @rdlabo/capacitor-native-ui @rdlabo/ionic-theme-ios27 @erkamyaman/capacitor-foldable
 npx cap sync ios
 ```
 
-Keep your existing Web styles and enable Native UI once at application startup. The iOS 27 theme is optional:
+Use the [standard setup](setup.md) first. Its theme preset, device service and single startup call include Vertical Bars by default. The following is the runtime API reference, not another startup call:
 
 ```ts
 import { enableNativeUI } from '@rdlabo/capacitor-native-ui';
 
-void enableNativeUI();
+const shell = await enableNativeUI();
 ```
 
 `enableNativeUI()` also reads the WebView's effective top-left corner radius and applies it to page transitions. To configure only the transition without enabling native controls, call:
@@ -39,21 +39,21 @@ await configureNativeTransition();
 
 ### Navigation and native builds
 
-| Setup                               | Action                                                                                                                                |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Theme's `iosTransitionAnimation`    | Keep it; native transitions are already coordinated.                                                                                  |
-| Ionic default or custom animation   | Configure the [transition adapter](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/migration#native-ui-transition-adapter). |
-| Plugin installed or updated         | Run `npx cap sync ios`, then rebuild the native app.                                                                                  |
-| SPM or CocoaPods                    | Keep the existing dependency manager; both are supported.                                                                             |
-| Optional CocoaPods-to-SPM migration | Run `npx cap spm-migration-assistant`, then link the generated `CapApp-SPM` package to the app target in Xcode.                       |
-| Ordinary native glass               | Requires Xcode 26+, Capacitor 8 and iOS 26+.                                                                                          |
-| Web, Android, SSR or older iOS      | Retain the Web implementation.                                                                                                        |
+| Setup                               | Action                                                                                                                                      |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Theme's `iosTransitionAnimation`    | Keep it; native transitions are already coordinated.                                                                                        |
+| Ionic default or custom animation   | Configure the [transition adapter](https://webview-native-ui.com/projects/capacitor-native-ui/docs/migration#native-ui-transition-adapter). |
+| Plugin installed or updated         | Run `npx cap sync ios`, then rebuild the native app.                                                                                        |
+| SPM or CocoaPods                    | Keep the existing dependency manager; both are supported.                                                                                   |
+| Optional CocoaPods-to-SPM migration | Run `npx cap spm-migration-assistant`, then link the generated `CapApp-SPM` package to the app target in Xcode.                             |
+| Ordinary native glass               | Requires Xcode 26+, Capacitor 8 and iOS 26+.                                                                                                |
+| Web, Android, SSR or older iOS      | Retain the Web implementation.                                                                                                              |
 
 No per-page registration, component list, native callback or Swift view controller is required.
 
 This is an opt-in feature. The ordinary `@rdlabo/ionic-theme-ios27` theme entry point does not import Capacitor. Native runtime entry points require `@capacitor/core`, including in browser builds. Native sources are still detected and built by Capacitor's sync when `@rdlabo/capacitor-native-ui` is a direct dependency of a Capacitor project, even if the application does not call `enableNativeUI()`.
 
-Native light/dark appearance is resolved from each source element’s computed style. See [Light and dark appearance](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/appearance) for theme inheritance, priority, live updates and the shared Vertical Bars behavior.
+Native light/dark appearance is resolved from each source element’s computed style. See [Light and dark appearance](https://webview-native-ui.com/projects/capacitor-native-ui/docs/appearance) for theme inheritance, priority, live updates and the shared Vertical Bars behavior.
 
 ## Connection recovery
 
@@ -75,7 +75,7 @@ const shell = await enableNativeUI({
 });
 ```
 
-Here, ordinary toolbar actions project individually and eligible rail actions can group. All six control fields accept `true`, `false`, `'horizontalOnly'`, or `'verticalOnly'`; omitted fields are `true`. For all automatic controls only in the rail, use `controls: 'verticalOnly'`. See [selection defaults](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/configuration#selection-defaults) for the complete table.
+Here, ordinary toolbar actions project individually and eligible rail actions can group. All six control fields accept `true`, `false`, `'horizontalOnly'`, or `'verticalOnly'`; omitted fields are `true`. For all automatic controls only in the rail, use `controls: 'verticalOnly'`. See [selection defaults](https://webview-native-ui.com/projects/capacitor-native-ui/docs/configuration#selection-defaults) for the complete table.
 
 `button` selects ordinary actions inside or outside a group, including menu buttons. `buttonGroup` only groups already selected actions. With `buttonGroup: true, button: false`, no ordinary action projects without explicit selection. `backButton` independently selects back navigation, including back buttons inside `ion-buttons`; back buttons never join ordinary groups.
 
@@ -88,7 +88,7 @@ Restart the runtime to change these startup options.
 | `data-horizontal-bars` | Ordinary placement      | Select the action, or allow grouping on `ion-buttons`. | Exclude the action, or disable grouping on `ion-buttons`. |
 | `data-vertical-bars`   | Vertical rail placement | Select the action, or allow grouping on `ion-buttons`. | Exclude the action, or disable grouping on `ion-buttons`. |
 
-On a button/back button these attributes control selection; on `ion-buttons` they control grouping only. Neither is inherited. Missing, invalid or empty values use the matching `controls` default. Vertical action opt-ins and their eligibility rules are detailed in [Vertical Bars](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/vertical-bars#explicit-action-selection-and-local-grouping).
+On a button/back button these attributes control selection; on `ion-buttons` they control grouping only. Neither is inherited. Missing, invalid or empty values use the matching `controls` default. Vertical action opt-ins and their eligibility rules are detailed in [Vertical Bars](https://webview-native-ui.com/projects/capacitor-native-ui/docs/vertical-bars#explicit-action-selection-and-local-grouping).
 
 ```html
 <ion-buttons data-horizontal-bars="false" data-vertical-bars="true">
@@ -115,7 +115,7 @@ The standalone `enableVerticalControlArea()` defaults `controls` to `'verticalOn
 
 ## Supported markup
 
-The table below describes the ordinary Native UI. Vertical Bars uses the separate [toolbar action rules](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/vertical-bars#toolbar-actions).
+The table below describes the ordinary Native UI. Vertical Bars uses the separate [toolbar action rules](https://webview-native-ui.com/projects/capacitor-native-ui/docs/vertical-bars#toolbar-actions).
 
 | Ionic component                               | Supported appearance and placement                                                                        | Native rendering                                                      |
 | --------------------------------------------- | --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
@@ -135,7 +135,7 @@ For the ordinary Native UI, only supported iOS-mode components are eligible. The
 
 Use `data-native-ui="disabled"` (or the equivalent `native-ui-disabled` class) to disable only the iOS Native UI while keeping the Web theme. It excludes the element and all its descendants. Adding or removing the attribute or class at runtime automatically restores Web rendering or re-evaluates native eligibility.
 
-Only the exact value `disabled` opts out; an empty or unknown value does not opt out. Remove the attribute to restore automatic Ionic projection. For explicitly declared HTML controls, restore the original `data-native-ui="button"` or `data-native-ui="back-button"` value instead. Alternatively, set `data-native-ui="disabled"` on a parent to disable a subtree while preserving its children's declarations. If the `native-ui-disabled` class is also present, remove it as well. This does not disable clicks or change the Web theme. The runtime-owned `data-native-ui-projected` marker is separate; applications should not set it. For the previous opt-out attribute, see [migration](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/migration#native-ui-naming-changes).
+Only the exact value `disabled` opts out; an empty or unknown value does not opt out. Remove the attribute to restore automatic Ionic projection. For explicitly declared HTML controls, restore the original `data-native-ui="button"` or `data-native-ui="back-button"` value instead. Alternatively, set `data-native-ui="disabled"` on a parent to disable a subtree while preserving its children's declarations. If the `native-ui-disabled` class is also present, remove it as well. This does not disable clicks or change the Web theme. The runtime-owned `data-native-ui-projected` marker is separate; applications should not set it. For the previous opt-out attribute, see [migration](https://webview-native-ui.com/projects/capacitor-native-ui/docs/migration#native-ui-naming-changes).
 
 ```html
 <ion-toolbar data-native-ui="disabled">
@@ -314,11 +314,11 @@ Custom host animation or transition declarations on the FAB, list or button keep
 
 ## Transitions and recovery
 
-The built-in `iosTransitionAnimation` prepares native controls before starting the Web animation. Supported fixed toolbar controls remain native; moving page controls return to Web presentation. Interactive progress and completion/cancellation are queued while preparation is in progress. Stationary shared tabs are retained. First render and transitions without an animation builder are covered by the startup runtime and Ionic lifecycle events. Default Ionic and custom navigation builders can use the same integration through `withNativeUITransition()`, exported by `@rdlabo/ionic-theme-ios27`. See [Connect your navigation animation](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/ionic-vertical-bars#2-connect-your-navigation-animation) for the setup.
+The built-in `iosTransitionAnimation` prepares native controls before starting the Web animation. Supported fixed toolbar controls remain native; moving page controls return to Web presentation. Interactive progress and completion/cancellation are queued while preparation is in progress. Stationary shared tabs are retained. First render and transitions without an animation builder are covered by the startup runtime and Ionic lifecycle events. Default Ionic and custom navigation builders can use the same integration through `withNativeUITransition()`, exported by `@rdlabo/ionic-theme-ios27`. See [Connect your navigation animation](https://webview-native-ui.com/projects/capacitor-native-ui/docs/ionic-vertical-bars#2-connect-your-navigation-animation) for the setup.
 
 Ordinary native/Web handoffs share a 180ms opacity crossfade, including Vertical Bars in both directions. Outgoing visuals cannot receive input or accessibility focus. Reduce Motion and modal presentation use immediate handoffs; search controllers keep their UIKit-managed transition.
 
-Tab switches skip the Web/native crossfade so a retiring UIKit snapshot cannot linger over the next tab. Detection uses the router URL versus the still-selected tab on `ionViewWillLeave` (and vanilla `ionTabsWillChange` / `ionTabsDidChange` DOM events). With the navigation adapter, Vertical Bars use native push/pop toolbar animations; during an interactive swipe they retain the source toolbar until the gesture commits. Horizontal toolbar navigation retains corresponding native surfaces, prepares new destinations natively, and fades unmatched outgoing surfaces in place with page progress. Cancellation reverses the fade. The exit uses opacity; it does not reproduce the system navigation bar’s blur effect. See [toolbar button correspondence](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/configuration#toolbar-button-correspondence) for identity rules and older native binary behavior.
+Tab switches skip the Web/native crossfade so a retiring UIKit snapshot cannot linger over the next tab. Detection uses the router URL versus the still-selected tab on `ionViewWillLeave` (and vanilla `ionTabsWillChange` / `ionTabsDidChange` DOM events). With the navigation adapter, Vertical Bars use native push/pop toolbar animations; during an interactive swipe they retain the source toolbar until the gesture commits. Horizontal toolbar navigation retains corresponding native surfaces, prepares new destinations natively, and fades unmatched outgoing surfaces in place with page progress. Cancellation reverses the fade. The exit uses opacity; it does not reproduce the system navigation bar’s blur effect. See [toolbar button correspondence](https://webview-native-ui.com/projects/capacitor-native-ui/docs/configuration#toolbar-button-correspondence) for identity rules and older native binary behavior.
 
 Standard Ionic overlays suspend ordinary native projection until dismissal. Vertical Bars use a separate policy:
 
@@ -357,7 +357,7 @@ await shell.enableVerticalControlArea();
 await shell.destroy(); // stop all projection
 ```
 
-See [all configuration options](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/configuration) for defaults, rail-only usage and lifecycle methods. For explicit HTML sources without Ionic, see [framework-independent setup](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/framework-independent).
+See [all configuration options](https://webview-native-ui.com/projects/capacitor-native-ui/docs/configuration) for defaults, rail-only usage and lifecycle methods. For explicit HTML sources without Ionic, see [framework-independent setup](https://webview-native-ui.com/projects/capacitor-native-ui/docs/framework-independent).
 
 ### Popovers anchored to Vertical Bars
 
@@ -422,15 +422,15 @@ The native material and control appearance follow the running iOS version; an iO
 
 iPhone Duo support, including standalone Vertical Bars, is stable starting with version 2.0.0.
 
-The standalone Vertical Control Area entry point (`@rdlabo/capacitor-native-ui/vertical-bars`) works with application-supplied Web layout. The theme package offers an [optional rail stylesheet](https://docs.rdlabo.dev/projects/ionic-theme-ios27/docs/vertical-bars-layout), `@rdlabo/ionic-theme-ios27/dist/css/vertical-bars.css`, which can be used without loading the full iOS 27 appearance. Call `enableNativeUI({ controls: 'verticalOnly' })` for this use case; its default selection targets controls placed in the vertical area. Apps already calling `enableNativeUI()` should keep that single runtime rather than starting both. See [Device layout and split panes](https://docs.rdlabo.dev/projects/ionic-theme-ios27/docs/vertical-bars-layout) for the complete setup, including hinge posture and the split-pane layout for apps that do not use this shell at all.
+The standalone Vertical Control Area entry point (`@rdlabo/capacitor-native-ui/vertical-bars`) works with application-supplied Web layout. The theme package offers a [standalone rail stylesheet](https://webview-native-ui.com/projects/ionic-theme-ios27/docs/vertical-bars-layout), `@rdlabo/ionic-theme-ios27/dist/css/vertical-bars.css`, which can be used without loading the full iOS 27 appearance. Call `enableNativeUI({ controls: 'verticalOnly' })` for this use case; its default selection targets controls placed in the vertical area. Apps already calling `enableNativeUI()` should keep that single runtime rather than starting both. See [Device layout and split panes](https://webview-native-ui.com/projects/ionic-theme-ios27/docs/vertical-bars-layout) for the complete setup, including hinge posture and the split-pane layout for apps that do not use this shell at all.
 
-Vertical Bars uses a SwiftUI `TabView` and toolbar in the system rail. Ionic remains the source of labels, icons, selected/disabled state and actions. See [Vertical Bars](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/vertical-bars) for rail layout, native fallback and supported overlays.
+Vertical Bars uses a SwiftUI `TabView` and toolbar in the system rail. Ionic remains the source of labels, icons, selected/disabled state and actions. See [Vertical Bars](https://webview-native-ui.com/projects/capacitor-native-ui/docs/vertical-bars) for rail layout, native fallback and supported overlays.
 
-In Vertical Bars, automatic selection of fixed-toolbar `ion-button` actions requires an `ion-icon` or SVG with `slot="icon-only"`; `data-vertical-bars="true"` can explicitly select other supported buttons. All fills and Ionic colors are eligible; submit buttons follow the same placement rule. Add `.ios-theme-horizontal-only` to a button or its `ion-buttons` group to keep it horizontal. See [Toolbar actions](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/vertical-bars#toolbar-actions) for placement and exclusion rules.
+In Vertical Bars, automatic selection of fixed-toolbar `ion-button` actions requires an `ion-icon` or SVG with `slot="icon-only"`; `data-vertical-bars="true"` can explicitly select other supported buttons. All fills and Ionic colors are eligible; submit buttons follow the same placement rule. Add `.ios-theme-horizontal-only` to a button or its `ion-buttons` group to keep it horizontal. See [Toolbar actions](https://webview-native-ui.com/projects/capacitor-native-ui/docs/vertical-bars#toolbar-actions) for placement and exclusion rules.
 
-**Native button appearance:** Native vertical buttons default to `buttonProjection: 'system'`. Use `source` to project Ionic fill and colors, with `data-projection="source|system"` or the equivalent `ios-theme-projection-source` / `ios-theme-projection-system` classes for local exceptions. These settings affect native vertical `ion-button` and `ion-menu-button` actions only. Horizontal controls and Web clones keep their existing behavior. See [Choose button appearance](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/vertical-bars#choose-button-appearance) for priority and fill rules.
+**Native button appearance:** Native vertical buttons default to `buttonProjection: 'system'`. Use `source` to project Ionic fill and colors, with `data-projection="source|system"` or the equivalent `ios-theme-projection-source` / `ios-theme-projection-system` classes for local exceptions. These settings affect native vertical `ion-button` and `ion-menu-button` actions only. Horizontal controls and Web clones keep their existing behavior. See [Choose button appearance](https://webview-native-ui.com/projects/capacitor-native-ui/docs/vertical-bars#choose-button-appearance) for priority and fill rules.
 
-For standalone setup while keeping your existing theme, see [iPhone Duo with your existing theme](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/ionic-vertical-bars).
+For standalone setup while keeping your existing theme, see [iPhone Duo with your existing theme](https://webview-native-ui.com/projects/capacitor-native-ui/docs/ionic-vertical-bars).
 
 ## Native UI API
 

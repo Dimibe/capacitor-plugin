@@ -1,6 +1,6 @@
 # Configure Native UI
 
-This is the settings reference. Start with [how projection works](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/readme#how-projection-works), then [Ionic setup](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/setup) or [HTML setup](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/framework-independent) for installation.
+For installation, use the minimal [standard setup](setup.md): `enableNativeUI()` includes ordinary controls and Vertical Bars by default. This page is the settings reference; do not copy its expanded options as installation boilerplate. Start with [how projection works](https://webview-native-ui.com/projects/capacitor-native-ui/docs/readme#how-projection-works), then [Ionic setup](https://webview-native-ui.com/projects/capacitor-native-ui/docs/setup) or [HTML setup](https://webview-native-ui.com/projects/capacitor-native-ui/docs/framework-independent) for installation.
 
 Call `enableNativeUI()` once after your application's DOM is mounted. Ionic and explicitly marked HTML controls share the standard Swift renderers. The theme is optional; Web layout, safe areas and spacing belong to your app or theme.
 
@@ -10,7 +10,7 @@ import { enableNativeUI } from '@rdlabo/capacitor-native-ui';
 const shell = await enableNativeUI();
 ```
 
-Without Ionic, import the same API from `@rdlabo/capacitor-native-ui/core`. That entry does not load Ionic's optional popover integration. See [plain HTML](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/framework-independent).
+Without Ionic, import the same API from `@rdlabo/capacitor-native-ui/core`. That entry does not load Ionic's optional popover integration. See [plain HTML](https://webview-native-ui.com/projects/capacitor-native-ui/docs/framework-independent).
 
 ## Platform behavior
 
@@ -24,7 +24,7 @@ Without Ionic, import the same API from `@rdlabo/capacitor-native-ui/core`. That
 
 Web rails require the Ionic rail layout or an application-owned HTML `webHost`. Settings never create a device capability.
 
-For HTML-derived light/dark behavior, see [Light and dark appearance](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/appearance). Appearance is configured in Web CSS, not through a startup option.
+For HTML-derived light/dark behavior, see [Light and dark appearance](https://webview-native-ui.com/projects/capacitor-native-ui/docs/appearance). Appearance is configured in Web CSS, not through a startup option.
 
 ## All settings
 
@@ -80,7 +80,7 @@ Horizontal and vertical describe **control placement**, not screen orientation o
 | `segment`     | Select supported segments.                                                       |
 | `fab`         | Select supported floating action buttons.                                        |
 
-Local `data-horizontal-bars="true|false"` and `data-vertical-bars="true|false"` override the matching selection default. On `ion-buttons` they control grouping only. Explicit `data-native-ui` sources are independent of these defaults. Structural exclusions and rail availability still apply. See [toolbar selection and grouping](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/native-ui#toolbar-selection-and-grouping).
+Local `data-horizontal-bars="true|false"` and `data-vertical-bars="true|false"` override the matching selection default. On `ion-buttons` they control grouping only. Explicit `data-native-ui` sources are independent of these defaults. Structural exclusions and rail availability still apply. See [toolbar selection and grouping](https://webview-native-ui.com/projects/capacitor-native-ui/docs/native-ui#toolbar-selection-and-grouping).
 
 ### Toolbar button correspondence
 
@@ -163,7 +163,6 @@ const shell = await enableNativeUI({
   verticalBars: {
     enabled: true,
     placement: {
-      edge: 'trailing',
       webHost: document.querySelector<HTMLElement>('#rail')!,
     },
   },
@@ -209,7 +208,7 @@ Disabling rail projection does not remove application CSS or change application-
 shell.markForCheck();
 ```
 
-Use this after changing a property or reader state that does not cause a DOM mutation. It schedules a check, batches repeated requests, and sends only changed native snapshots. It returns `void`; it does not wait for native completion or render your framework's DOM. Calls after destruction are ignored. See [source checks and observation](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/native-ui-extensions#schedule-a-source-check).
+Use this after changing a property or reader state that does not cause a DOM mutation. It schedules a check, batches repeated requests, and sends only changed native snapshots. It returns `void`; it does not wait for native completion or render your framework's DOM. Calls after destruction are ignored. See [source checks and observation](https://webview-native-ui.com/projects/capacitor-native-ui/docs/native-ui-extensions#schedule-a-source-check).
 
 ## Understand why a source stays on the Web
 
@@ -239,4 +238,24 @@ Open the WebView developer console and filter for `[Native UI]`. Diagnostics inc
 
 The standalone `enableVerticalControlArea()` defaults selection to `'verticalOnly'`. Its `setPlacement()` helper is a deprecated Web CSS adapter; use the theme's `setVerticalBarsLayout({ edge, inset })` for Web layout. Native availability comes from the plugin's device metrics.
 
-See [upgrading from 1.2.1](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/migration) for package separation, removed options and changed partial-control defaults.
+See [upgrading from 1.2.1](https://webview-native-ui.com/projects/capacitor-native-ui/docs/migration) for package separation, removed options and changed partial-control defaults.
+
+## Native project setup
+
+SwiftPM resolves Engine automatically. For an existing CocoaPods app, install the Engine version required by your installed Native UI package:
+
+```sh
+npm install "@webview-native-ui/engine@$(node -p "require('./node_modules/@rdlabo/capacitor-native-ui/package.json').dependencies['@webview-native-ui/engine']")"
+```
+
+Add Engine to the existing application target in `ios/App/Podfile`, outside the generated `def capacitor_pods` block:
+
+```ruby
+target 'App' do
+  capacitor_pods
+  pod 'WebViewNativeUIEngine', :path => '../../node_modules/@webview-native-ui/engine'
+  # Keep your other application pods here.
+end
+```
+
+Adjust the path for your project layout and repeat version alignment when upgrading Native UI. This is CocoaPods compatibility setup, not application UI logic.

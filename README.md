@@ -2,7 +2,27 @@
 
 Render supported Web controls with UIKit and SwiftUI on iOS while keeping your application state, routing, and handlers in the WebView. Use existing Ionic markup or explicit HTML buttons; custom SwiftUI or Android Compose content can be added through experimental app-local extensions.
 
-Native UI is opt-in and officially supported starting with 2.0.0. Standard controls on Android, browsers, older iOS, and unsupported controls retain Web presentation. Android supports experimental app-local Compose extensions. Keep your application's styles and layout; the iOS theme is optional.
+Native UI is opt-in. Standard controls on Android, browsers, older iOS, and unsupported controls retain Web presentation. Android supports experimental app-local Compose extensions. Keep your application's styles and layout; the iOS theme is optional.
+
+## Install from npm
+
+For the standard Ionic iOS setup, install Native UI, the iOS 27 theme and Foldable:
+
+```sh
+npm install @rdlabo/capacitor-native-ui @rdlabo/ionic-theme-ios27 @erkamyaman/capacitor-foldable
+```
+
+Use the theme's single stylesheet and `ios27ThemeConfig` preset, then start one runtime after the app shell mounts:
+
+```ts
+import { enableNativeUI } from '@rdlabo/capacitor-native-ui';
+
+const shell = await enableNativeUI();
+```
+
+**Vertical Bars is enabled by default**, together with ordinary controls. Connect the standard device-layout service; supported devices choose rail placement and other devices retain Web layout.
+
+Follow [Ionic setup](docs/setup.md) for the complete stylesheet, bootstrap, device service and native build steps. Keep another Web theme with [the existing-theme setup](docs/ionic-vertical-bars.md), or use [HTML setup](docs/framework-independent.md) without Ionic. Native UI does not own application state, routing or theme selection. The application owner destroys its handle when disposed.
 
 ## How projection works
 
@@ -23,55 +43,33 @@ Projection changes presentation; it does not translate arbitrary HTML or CSS int
 
 Native ownership follows the source and its projection context, independently of animation and image availability. Modal presentation, dragging, resizing, and image restoration do not transfer an accepted source to Web while its projection remains eligible. An explicit Web handover, unsupported or rejected projection, runtime failure, or the end of the source/context releases it. A disabled button remains the same Native-owned control with disabled input.
 
-Blocking Web overlays can keep prepared images of native buttons, segments, FABs and tab bars beneath their backdrop. Images retain the captured native appearance and are prepared after native updates and coalesced visual changes. Platform capture can differ from live compositing, including Liquid Glass edge highlights; pixel-identical material reproduction is not guaranteed. Preparation pauses during touch; presentation uses the last completed image without waiting for capture or a bridge acknowledgement. A missing image does not release an accepted Native source to Web. Native popovers that retain their controls keep the native route. See [the handoff rules](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/appearance#temporary-images-beneath-web-overlays) for movement, restoration and exclusions. Rebuild the native app to enable this capability; older native binaries keep their existing route.
+Blocking Web overlays can keep prepared images of native buttons, segments, FABs and tab bars beneath their backdrop. Images retain the captured native appearance and are prepared after native updates and coalesced visual changes. Platform capture can differ from live compositing, including Liquid Glass edge highlights; pixel-identical material reproduction is not guaranteed. Preparation pauses during touch; presentation uses the last completed image without waiting for capture or a bridge acknowledgement. A missing image does not release an accepted Native source to Web. Native popovers that retain their controls keep the native route. See [the handoff rules](https://webview-native-ui.com/projects/capacitor-native-ui/docs/appearance#temporary-images-beneath-web-overlays) for movement, restoration and exclusions. Rebuild the native app to enable this capability; older native binaries keep their existing route.
 
 ## Choose what to build
 
-| Goal                                                | Start here                                                                                                            |
-| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| Render existing Ionic controls natively             | [Ionic setup](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/setup)                                        |
-| Use native buttons without Ionic                    | [HTML setup](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/framework-independent)                         |
-| Add a side rail to Ionic while keeping your theme   | [Vertical Bars step by step](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/ionic-vertical-bars)           |
-| Add a side rail without Ionic                       | [HTML rail setup](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/framework-independent)                    |
-| Add native controls to an existing iOS 27 theme app | [Add Native UI to your theme](https://docs.rdlabo.dev/projects/ionic-theme-ios27/docs/add-native-ui)                  |
-| Read Android Material You colors                    | [Android dynamic colors](docs/dynamic-colors.md)                                                                      |
-| Render custom SwiftUI or Android Compose content    | [App-local extensions (experimental)](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/native-ui-extensions) |
-
-## Install from npm
-
-We use [Capacitor Foldable](https://github.com/erkamyaman/capacitor-foldable), an excellent community plugin by Erkam Yaman, as our standard device-layout integration. It exposes fold state, hinge geometry, bar placement and change events to your application, giving you control over how the layout responds. Foldable handles device reporting; the theme provides Web layout helpers and Native UI projects controls. Install it alongside the package you use, then connect its events in your app.
-
-Install Native UI and Foldable together in your Capacitor application:
-
-```sh
-npm install @rdlabo/capacitor-native-ui @erkamyaman/capacitor-foldable
-```
-
-If you also use the iOS 27 theme, install or update both packages together:
-
-```sh
-npm install @rdlabo/capacitor-native-ui @rdlabo/ionic-theme-ios27 @erkamyaman/capacitor-foldable
-```
-
-Native UI, the theme, Engine, and Foldable are versioned independently. When using the theme, choose a Native UI version compatible with the theme’s declared peer dependency. Native UI includes the Engine npm dependency and links its native libraries through SwiftPM and Maven. CocoaPods consumers also need the [local Engine pod setup](https://github.com/webview-native-ui/engine/blob/v1.0.0/docs/getting-started/capacitor.md#cocoapods-compatibility-through-npm). Declare Native UI as a direct dependency so Capacitor can discover the plugin. The setup commands install Foldable as a separate application dependency. Installing these packages does not activate native controls; application startup chooses projection and connects device layout.
-
-Continue with [Ionic setup](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/setup), [HTML setup](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/framework-independent), or [extensions](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/native-ui-extensions). After configuring startup, build your application's Web assets, run `npx cap sync` and rebuild the native app. No repository checkout or archive download is needed.
-
-Upgrading from the native APIs bundled in theme 1.2.0 or 1.2.1? Follow the [migration guide](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/migration) for import, configuration and native project changes.
+| Goal                                                | Start here                                                                                                                  |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Render existing Ionic controls natively             | [Ionic setup](https://webview-native-ui.com/projects/capacitor-native-ui/docs/setup)                                        |
+| Use native buttons without Ionic                    | [HTML setup](https://webview-native-ui.com/projects/capacitor-native-ui/docs/framework-independent)                         |
+| Keep another Ionic theme with Vertical Bars         | [Vertical Bars step by step](https://webview-native-ui.com/projects/capacitor-native-ui/docs/ionic-vertical-bars)           |
+| Use Vertical Bars without Ionic                     | [HTML rail setup](https://webview-native-ui.com/projects/capacitor-native-ui/docs/framework-independent)                    |
+| Add native controls to an existing iOS 27 theme app | [Add Native UI to your theme](https://webview-native-ui.com/projects/ionic-theme-ios27/docs/add-native-ui)                  |
+| Read Android Material You colors                    | [Android dynamic colors](docs/dynamic-colors.md)                                                                            |
+| Render custom SwiftUI or Android Compose content    | [App-local extensions (experimental)](https://webview-native-ui.com/projects/capacitor-native-ui/docs/native-ui-extensions) |
 
 ## Requirements
 
-Native startup requires Capacitor 8 and an iOS or Android project. Android extensions require API 24+ and Kotlin/Compose. Ordinary native rendering requires iOS 26+ and Xcode 26+. The Ionic adapter declares Ionic `>=8.8.1 <10`, with automated E2E validation on Ionic 9; the `/core` HTML adapter requires no Ionic or theme package. [Vertical Bars](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/vertical-bars) and [extension placement](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/native-ui-extensions#content-and-placement-are-independent) have additional device requirements.
+Native startup requires Capacitor 8 and an iOS or Android project. Android extensions require API 24+ and Kotlin/Compose. Ordinary native rendering requires iOS 26+ and Xcode 26+. The Ionic adapter declares Ionic `>=8.8.1 <10`, with automated E2E validation on Ionic 9; the `/core` HTML adapter requires no Ionic or theme package. [Vertical Bars](https://webview-native-ui.com/projects/capacitor-native-ui/docs/vertical-bars) and [extension placement](https://webview-native-ui.com/projects/capacitor-native-ui/docs/native-ui-extensions#content-and-placement-are-independent) have additional device requirements.
 
-For standard controls, follow the setup guide for your markup; the Ionic and HTML adapters use different imports. For custom native content, start directly with the [extensions guide](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/native-ui-extensions).
+For standard controls, follow the setup guide for your markup; the Ionic and HTML adapters use different imports. For custom native content, start directly with the [extensions guide](https://webview-native-ui.com/projects/capacitor-native-ui/docs/native-ui-extensions).
 
 ## Reference
 
-- [Supported Ionic controls](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/native-ui#supported-markup) and fallback behavior.
-- [Configuration](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/configuration): defaults, selected controls, rail-only mode, and live changes.
-- [Light and dark appearance](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/appearance): inherit the Web theme, configure custom HTML, and understand shared rail appearance.
-- [Vertical Bars](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/vertical-bars): eligibility, appearance, and runtime API.
-- [Migration](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/migration): package names, imports, and native project updates.
+- [Supported Ionic controls](https://webview-native-ui.com/projects/capacitor-native-ui/docs/native-ui#supported-markup) and fallback behavior.
+- [Configuration](https://webview-native-ui.com/projects/capacitor-native-ui/docs/configuration): defaults, selected controls, rail-only mode, and live changes.
+- [Light and dark appearance](https://webview-native-ui.com/projects/capacitor-native-ui/docs/appearance): inherit the Web theme, configure custom HTML, and understand shared rail appearance.
+- [Vertical Bars](https://webview-native-ui.com/projects/capacitor-native-ui/docs/vertical-bars): eligibility, appearance, and runtime API.
+- [Migration](https://webview-native-ui.com/projects/capacitor-native-ui/docs/migration): package names, imports, and native project updates.
 
 ## Development
 
@@ -121,7 +119,7 @@ Capacitor migrations run from this repository root. `package.json`, `Package.swi
 
 ### Swift Package consumers
 
-Add `https://github.com/webview-native-ui/capacitor-plugin.git` in Xcode and select the `NativeUICore` product to use `import NativeUICore` without linking the Capacitor adapter. Before this change is released, select the `refactor/extract-shared-core` branch. Both products share the repository release tags; SwiftPM can still fetch Capacitor while resolving the package dependencies.
+Add `https://github.com/webview-native-ui/capacitor-plugin.git` in Xcode and select the `NativeUICore` product to use `import NativeUICore` without linking the Capacitor adapter. Both products share the repository release tags; SwiftPM can still fetch Capacitor while resolving the package dependencies.
 
 Capacitor apps continue to use the `RdlaboCapacitorNativeUi` product and `import NativeUIPlugin`. That module re-exports Core, so existing `NativeUI.register` calls keep using the same registration state as the adapter. The root manifest owns both targets; there is no separate nested Swift package.
 

@@ -8,15 +8,15 @@ Vertical Bars moves eligible Ionic controls or explicitly marked HTML buttons in
 
 Choose your setup before using this reference:
 
-- **Ionic with a custom or default theme:** [Ionic rail setup](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/ionic-vertical-bars#try-it-in-your-existing-ionic-app).
-- **No Ionic:** [HTML setup](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/framework-independent) and its [device rail setup](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/framework-independent#device-placement-for-vertical-bars). Use `/core` and your own layout; the Ionic setup below does not apply.
+- **Ionic with a custom or default theme:** [Ionic rail setup](https://webview-native-ui.com/projects/capacitor-native-ui/docs/ionic-vertical-bars#try-it-in-your-existing-ionic-app).
+- **No Ionic:** [HTML setup](https://webview-native-ui.com/projects/capacitor-native-ui/docs/framework-independent) and its [device rail setup](https://webview-native-ui.com/projects/capacitor-native-ui/docs/framework-independent#device-placement-for-vertical-bars). Use `/core` and your own layout; the Ionic setup below does not apply.
 - **Existing iOS 27 theme and Native UI:** [Connect device placement](#use-with-capacitor-foldable) using your existing runtime.
 
-This page covers device-plugin integration, control eligibility, native appearance and runtime options. For posture-driven Ionic split panes, see [Device layout and split panes](https://docs.rdlabo.dev/projects/ionic-theme-ios27/docs/vertical-bars-layout).
+This page covers device-plugin integration, control eligibility, native appearance and runtime options. For posture-driven Ionic split panes, see [Device layout and split panes](https://webview-native-ui.com/projects/ionic-theme-ios27/docs/vertical-bars-layout).
 
 Vertical Bars and iPhone Duo support are stable starting with version 2.0.0.
 
-See [shared configuration](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/configuration) for all defaults and live `rail.enableVerticalControlArea()` / `rail.disableVerticalControlArea()` methods. [Plain HTML controls](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/framework-independent) use the same native rail renderers.
+See [shared configuration](https://webview-native-ui.com/projects/capacitor-native-ui/docs/configuration) for all defaults and live `rail.enableVerticalControlArea()` / `rail.disableVerticalControlArea()` methods. [Plain HTML controls](https://webview-native-ui.com/projects/capacitor-native-ui/docs/framework-independent) use the same native rail renderers.
 
 ## Enable Vertical Bars
 
@@ -26,11 +26,11 @@ Install Native UI and the required Foldable device-state plugin as direct applic
 npm install @rdlabo/capacitor-native-ui @erkamyaman/capacitor-foldable
 ```
 
-For Ionic, follow the [standard setup](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/ionic-vertical-bars): load your rail CSS, configure navigation, then connect Foldable's initial placement and `barPlacementChange` events before starting one runtime. The [integration below](#use-with-capacitor-foldable) also covers existing runtimes and application-owned CSS. Build your Web assets, run `npx cap sync ios`, and rebuild the native app.
+For Ionic, follow the [standard setup](https://webview-native-ui.com/projects/capacitor-native-ui/docs/ionic-vertical-bars): load your rail CSS, configure navigation, then connect Foldable's initial layout and `layoutChange` events before starting one runtime. The [integration below](#use-with-capacitor-foldable) also covers existing runtimes and application-owned CSS. Build your Web assets, run `npx cap sync ios`, and rebuild the native app.
 
-A runtime alone does not reserve Web space. Keep the device subscription for the standard setup; manual placement belongs to the [optional browser preview](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/ionic-vertical-bars#optional-browser-preview). If Native UI is already active, reuse it rather than starting another runtime.
+A runtime alone does not reserve Web space. Keep the device subscription for the standard setup; manual placement belongs to the [optional browser preview](https://webview-native-ui.com/projects/capacitor-native-ui/docs/ionic-vertical-bars#optional-browser-preview). If Native UI is already active, reuse it rather than starting another runtime.
 
-The `/vertical-bars` entry point requires `@capacitor/core`, including in browser builds. Using only the theme’s rail CSS needs no native runtime. For native setup and navigation transitions, follow the [existing-theme guide](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/ionic-vertical-bars).
+The `/vertical-bars` entry point requires `@capacitor/core`, including in browser builds. Using only the theme’s rail CSS needs no native runtime. For native setup and navigation transitions, follow the [existing-theme guide](https://webview-native-ui.com/projects/capacitor-native-ui/docs/ionic-vertical-bars).
 
 On supported Capacitor iOS, eligible controls use native SwiftUI rendering. Web, Android and unavailable native projection use Web clones. A browser preview can verify layout and actions, but cannot compare native button appearance.
 
@@ -38,33 +38,36 @@ On supported Capacitor iOS, eligible controls use native SwiftUI rendering. Web,
 
 The application or theme owns Web spacing, rail positioning, and fallback styles. The plugin reads the supplied Ionic layout and placement; it does not reserve Web content space on its own. With the iOS27 theme, use its `setVerticalBarsLayout({ edge, inset })` helper. Native-only applications use their own CSS; no theme helper is required. Native availability comes from device metrics, independently of Web layout.
 
-The [theme's optional rail stylesheet](https://docs.rdlabo.dev/projects/ionic-theme-ios27/docs/vertical-bars-layout) supplies one ready-made layout. Its classes and CSS variables are not a requirement to install the theme package: applications may provide equivalent layout themselves. The runtime currently uses the `ios-theme-vertical-bars` class on `ion-app` to identify the rail layout, regardless of who supplies its styles.
+The [theme's standalone rail stylesheet](https://webview-native-ui.com/projects/ionic-theme-ios27/docs/vertical-bars-layout) supplies one ready-made layout. Its classes and CSS variables are not a requirement to install the theme package: applications may provide equivalent layout themselves. The runtime currently uses the `ios-theme-vertical-bars` class on `ion-app` to identify the rail layout, regardless of who supplies its styles.
 
 ## Use with Capacitor Foldable
 
 [`@erkamyaman/capacitor-foldable`](https://github.com/erkamyaman/capacitor-foldable) is required in the standard Vertical Bars setup. Install it with Native UI as shown above, and connect its device placement to your Web layout. Native UI does not subscribe to Foldable automatically.
 
-The placement examples require Foldable **8.3.3 or later within version 8**, which includes `BarPlacement.inset`. If your app already uses an older version, update it with `npm install @erkamyaman/capacitor-foldable@^8.3.3`, then sync and rebuild the native app.
+The placement examples require Foldable **8.5 or later within version 8**, which includes `layoutChange` notifications when reserved regions change even if the rail edge and inset stay the same. If your app already uses an older version, update it with `npm install @erkamyaman/capacitor-foldable@^8.5`, then sync and rebuild the native app.
 
-| Owner                | Responsibility                                                                              |
-| -------------------- | ------------------------------------------------------------------------------------------- |
-| Foldable             | Report initial device state and subsequent placement/posture changes.                       |
-| Application or theme | Reserve Web space and choose the layout using the reported logical edge and measured inset. |
-| Native UI            | Check native rail availability independently and project eligible source controls.          |
+| Owner                | Responsibility                                                                                     |
+| -------------------- | -------------------------------------------------------------------------------------------------- |
+| Foldable             | Report initial device geometry and subsequent layout/posture changes.                              |
+| Application or theme | Apply resolved edge, inset and toolbar origin to Web layout; keep defaults in the applying layout. |
+| Native UI            | Check native rail availability independently and project eligible source controls.                 |
 
 ### With the theme's Ionic rail layout
 
-After loading [the rail stylesheet](https://docs.rdlabo.dev/projects/ionic-theme-ios27/docs/vertical-bars-layout) and mounting `ion-app`, connect device placement and start the runtime once:
+After loading [the rail stylesheet](https://webview-native-ui.com/projects/ionic-theme-ios27/docs/vertical-bars-layout) and mounting `ion-app`, connect device placement and start the runtime once:
 
 ```ts
-import { Foldable, type BarPlacement } from '@erkamyaman/capacitor-foldable';
+import { Foldable } from '@erkamyaman/capacitor-foldable';
+import { resolveVerticalBarsLayout } from '@rdlabo/capacitor-native-ui/integration';
 import { setVerticalBarsLayout } from '@rdlabo/ionic-theme-ios27';
 import { enableNativeUI } from '@rdlabo/capacitor-native-ui';
 
-const applyPlacement = ({ verticalBarEdge, inset }: BarPlacement) => setVerticalBarsLayout({ edge: verticalBarEdge, inset });
-const listener = await Foldable.addListener('barPlacementChange', applyPlacement);
-applyPlacement(await Foldable.getBarPlacement());
-const rail = await enableNativeUI({ controls: 'verticalOnly' });
+const applyLayout = async () => {
+  setVerticalBarsLayout(await resolveVerticalBarsLayout(Foldable));
+};
+const listener = await Foldable.addListener('layoutChange', () => void applyLayout());
+await applyLayout();
+const rail = await enableNativeUI();
 ```
 
 If a runtime is already active, keep it and add only the placement subscription. `setVerticalBarsLayout` resolves logical edges for RTL; a null edge restores the ordinary Web layout. Use the measured inset instead of a fixed width. Keep the theme's rail stylesheet; Foldable's `ionic-tabs.css` is not needed for this integration.
@@ -78,11 +81,11 @@ await rail.destroy();
 
 ### With application-owned CSS or without Ionic
 
-Use the same `getBarPlacement()` / `barPlacementChange` subscription, but apply the edge and inset to your own CSS instead of calling `setVerticalBarsLayout`. A null edge means your layout should restore its ordinary spacing. For Ionic, retain the rail layout classes described above; for plain HTML, use the `/core` entry and [device rail setup](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/framework-independent#device-placement-for-vertical-bars). Neither Foldable nor Native UI supplies the application's CSS. Explicit HTML rail markers remain active independently of CSS; to return those sources to their original placement on a null edge, call `disableVerticalControlArea()`, then `enableVerticalControlArea()` when a rail edge returns. Serialize these changes with your layout updates.
+Use the same `resolveVerticalBarsLayout(Foldable)` / `layoutChange` connection, but apply all returned layout values (`edge`, `inset` and `toolbarTop`) through your own application layout instead of calling `setVerticalBarsLayout`. Keep this integration in an application-owned service or module, not routed pages. A null edge means your layout should restore its ordinary spacing. For Ionic, retain the rail layout classes described above; for plain HTML, use the `/core` entry and [device rail setup](https://webview-native-ui.com/projects/capacitor-native-ui/docs/framework-independent#device-placement-for-vertical-bars). Neither Foldable nor Native UI supplies the application's CSS. Explicit HTML rail markers remain active independently of CSS; to return those sources to their original placement on a null edge, call `disableVerticalControlArea()`, then `enableVerticalControlArea()` when a rail edge returns. Serialize these changes with your layout updates.
 
 Keep Web layout updates separate from native availability: do not pass Foldable's edge through the deprecated `nativeEdge` option. Native UI reads that capability itself. Only an optional browser layout preview substitutes simulated placement for this subscription.
 
-For hinge-driven content layout, read `getFoldState()` and subscribe to `foldStateChange` separately. Hinge posture does not select controls or enable the rail; see the theme's [posture subscription and split-pane example](https://docs.rdlabo.dev/projects/ionic-theme-ios27/docs/vertical-bars-layout#read-the-device-layout).
+For hinge-driven content layout, read `getFoldState()` and subscribe to `foldStateChange` separately. Hinge posture does not select controls or enable the rail; see the theme's [posture subscription and split-pane example](https://webview-native-ui.com/projects/ionic-theme-ios27/docs/vertical-bars-layout#read-the-device-layout).
 
 ## Native rendering
 
@@ -98,7 +101,7 @@ Tab badges come from a visible `ion-badge` inside the original `ion-tab-button`.
 </ion-tab-button>
 ```
 
-The SwiftUI surface is clipped and hit-tested to the system rail. Web content remains visible and interactive outside that physical region. The runtime optimistically updates tab selection before forwarding the action to the original `ion-tab-button`, using the same event and stale-revision protection as the other native controls. Overlay layout follows the [optional theme rail layout](https://docs.rdlabo.dev/projects/ionic-theme-ios27/docs/vertical-bars-layout#reserve-the-vertical-rail) when that stylesheet is used; custom layouts remain the application’s responsibility.
+The SwiftUI surface is clipped and hit-tested to the system rail. Web content remains visible and interactive outside that physical region. The runtime optimistically updates tab selection before forwarding the action to the original `ion-tab-button`, using the same event and stale-revision protection as the other native controls. Overlay layout follows the [theme rail layout](https://webview-native-ui.com/projects/ionic-theme-ios27/docs/vertical-bars-layout#reserve-the-vertical-rail) when that stylesheet is used; custom layouts remain the application’s responsibility.
 
 ### Native popovers (Vertical Bars only)
 
@@ -108,12 +111,11 @@ Native popover presentation is limited to popovers anchored to accepted native V
 import { enableNativeUI } from '@rdlabo/capacitor-native-ui';
 
 const rail = await enableNativeUI({
-  controls: 'verticalOnly',
   ionic: { verticalBars: { popover: true } },
 });
 ```
 
-Use an `ion-popover` whose `trigger` identifies the projected button, or pass that button's click event to `PopoverController.create({ event, ... })`. Ordinary toolbar and body popovers remain on the Web. If a rail-anchored popover falls back to Web rendering, the rail also returns to Web projection until dismissal. See [native popover behavior and limitations](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/native-ui#popovers-anchored-to-vertical-bars).
+Use an `ion-popover` whose `trigger` identifies the projected button, or pass that button's click event to `PopoverController.create({ event, ... })`. Ordinary toolbar and body popovers remain on the Web. If a rail-anchored popover falls back to Web rendering, the rail also returns to Web projection until dismissal. See [native popover behavior and limitations](https://webview-native-ui.com/projects/capacitor-native-ui/docs/native-ui#popovers-anchored-to-vertical-bars).
 
 ## Toolbar actions
 
@@ -147,7 +149,7 @@ A toolbar whose content has all moved into the rail collapses while projection i
 
 ### Select actions and grouping independently
 
-Use `controls` to configure toolbar selection and grouping. Each field accepts `true`, `false`, `'horizontalOnly'`, or `'verticalOnly'`, with omitted fields defaulting to `true`. Use `controls: 'verticalOnly'` for all default selection in the rail. Local attributes can override selection; explicit sources and extensions remain independent. See [all selection defaults](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/configuration#selection-defaults).
+Use `controls` to configure toolbar selection and grouping. Each field accepts `true`, `false`, `'horizontalOnly'`, or `'verticalOnly'`, with omitted fields defaulting to `true`. Use `controls: 'verticalOnly'` for all default selection in the rail. Local attributes can override selection; explicit sources and extensions remain independent. See [all selection defaults](https://webview-native-ui.com/projects/capacitor-native-ui/docs/configuration#selection-defaults).
 
 | Option        | Responsibility                                                                                                     | What it does not do                                  |
 | ------------- | ------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------- |
@@ -255,17 +257,17 @@ remain opt-outs; those are distinct from the grouping setting.
 
 ### Placement versus appearance
 
-| Setting                    | Values                                               | Responsibility                                              | Applies to                                                                                                                                                                |
-| -------------------------- | ---------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `data-native-ui`           | `button`, `back-button`, `button-submit`, `disabled` | Declare an explicit source or exclude a subtree.            | [Explicit source elements](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/framework-independent#2-mark-source-controls); `disabled` also applies to ancestors. |
-| `data-native-ui-placement` | `element`, `rail`                                    | Choose the original element position or request the rail.   | Explicit sources; `element` also keeps automatic Ionic controls at their original position.                                                                               |
-| `data-vertical-bars`       | `true`, `false`                                      | Override rail selection or grouping defaults.               | Ionic actions and groups listed above.                                                                                                                                    |
-| `data-horizontal-bars`     | `true`, `false`                                      | Override ordinary-placement selection or grouping defaults. | [Ordinary Ionic controls](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/native-ui#toolbar-selection-and-grouping).                                            |
-| `data-projection`          | `system`, `source`                                   | Choose native appearance without selecting an action.       | Native vertical `ion-button` and `ion-menu-button`; inherited from the nearest `ion-buttons`.                                                                             |
+| Setting                    | Values                                               | Responsibility                                              | Applies to                                                                                                                                                                      |
+| -------------------------- | ---------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `data-native-ui`           | `button`, `back-button`, `button-submit`, `disabled` | Declare an explicit source or exclude a subtree.            | [Explicit source elements](https://webview-native-ui.com/projects/capacitor-native-ui/docs/framework-independent#2-mark-source-controls); `disabled` also applies to ancestors. |
+| `data-native-ui-placement` | `element`, `rail`                                    | Choose the original element position or request the rail.   | Explicit sources; `element` also keeps automatic Ionic controls at their original position.                                                                                     |
+| `data-vertical-bars`       | `true`, `false`                                      | Override rail selection or grouping defaults.               | Ionic actions and groups listed above.                                                                                                                                          |
+| `data-horizontal-bars`     | `true`, `false`                                      | Override ordinary-placement selection or grouping defaults. | [Ordinary Ionic controls](https://webview-native-ui.com/projects/capacitor-native-ui/docs/native-ui#toolbar-selection-and-grouping).                                            |
+| `data-projection`          | `system`, `source`                                   | Choose native appearance without selecting an action.       | Native vertical `ion-button` and `ion-menu-button`; inherited from the nearest `ion-buttons`.                                                                                   |
 
 Selection attributes are not inherited. Appearance follows the button-then-group priority described below. An attribute never makes unsupported markup or a missing native rail available.
 
-The rail shares one light/dark appearance across projected controls. See [Shared Vertical Bars appearance](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/appearance#shared-vertical-bars-appearance) when configuring your Web theme.
+The rail shares one light/dark appearance across projected controls. See [Shared Vertical Bars appearance](https://webview-native-ui.com/projects/capacitor-native-ui/docs/appearance#shared-vertical-bars-appearance) when configuring your Web theme.
 
 ### Choose button appearance
 
@@ -279,7 +281,7 @@ For native vertical `ion-button` and `ion-menu-button` actions, choose who contr
 | `'source'`           | Projects the supported Ionic fill and computed colors described in [Source fill rules](#source-fill-rules). |
 
 ```ts
-const rail = await enableNativeUI({ controls: 'verticalOnly', ionic: { verticalBars: { buttonProjection: 'source' } } });
+const rail = await enableNativeUI({ ionic: { verticalBars: { buttonProjection: 'source' } } });
 ```
 
 `enableNativeUI()` and the standalone `enableVerticalControlArea()` accept these settings inside `ionic.verticalBars`. Use one runtime, and destroy it before restarting with different options. Either mode preserves actions, disabled state and grouping. Disabled icons use the native disabled appearance. These appearance settings do not affect horizontal controls, source elements or Web fallback clones, so compare the native appearance on supported iOS.
@@ -312,7 +314,7 @@ The first matching setting wins:
 
 On the same element, a valid `data-projection` value takes precedence over the classes. Empty or unknown values are ignored. Without a valid attribute, `system` wins if both classes are present. Removing an attribute falls back to the element's classes, then the next level above. Attribute and class changes apply without restarting the runtime; grouping and placement stay unchanged.
 
-Only native vertical `ion-button` and `ion-menu-button` actions interpret these settings. Other ancestors, back buttons, tabs and FABs do not. They do not change Web styling. To keep a control or subtree on the Web entirely, use [`data-native-ui="disabled"`](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/native-ui#supported-markup).
+Only native vertical `ion-button` and `ion-menu-button` actions interpret these settings. Other ancestors, back buttons, tabs and FABs do not. They do not change Web styling. To keep a control or subtree on the Web entirely, use [`data-native-ui="disabled"`](https://webview-native-ui.com/projects/capacitor-native-ui/docs/native-ui#supported-markup).
 
 ### Source fill rules
 
@@ -328,7 +330,7 @@ For an `ion-button` resolved to `source`, fill is chosen separately from the pro
 
 ```ts
 // Keep system styling globally; local source buttons use Ionic's default fill.
-const rail = await enableNativeUI({ controls: 'verticalOnly', ionic: { verticalBars: { buttonDefaultFill: 'solid' } } });
+const rail = await enableNativeUI({ ionic: { verticalBars: { buttonDefaultFill: 'solid' } } });
 ```
 
 ```html
@@ -349,7 +351,7 @@ Inside `ion-buttons`, explicitly set `fill="solid"` to project a background; `bu
 
 ## Modal movement
 
-Modal rail controls keep Native source ownership during presentation, dragging, snapping and dismissal. At rest they use live Native controls. Movement below the reserved toolbar boundary uses images carried by the Modal dialog; movement at or above the boundary keeps the live Native controls pinned. Presentation and dismissal use prepared images for their transitions. These rules apply to grouped and individually projected buttons. See [Modal rail movement and glass-rim clipping](https://docs.rdlabo.dev/projects/capacitor-native-ui/docs/appearance#modal-rail-movement) for the presentation rules and clipping scope.
+Modal rail controls keep Native source ownership during presentation, dragging, snapping and dismissal. At rest they use live Native controls. Movement below the reserved toolbar boundary uses images carried by the Modal dialog; movement at or above the boundary keeps the live Native controls pinned. Presentation and dismissal use prepared images for their transitions. These rules apply to grouped and individually projected buttons. See [Modal rail movement and glass-rim clipping](https://webview-native-ui.com/projects/capacitor-native-ui/docs/appearance#modal-rail-movement) for the presentation rules and clipping scope.
 
 ## Tab bar
 
