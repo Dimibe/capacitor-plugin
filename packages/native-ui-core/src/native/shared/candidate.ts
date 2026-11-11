@@ -63,15 +63,22 @@ export const appendItem = (
   id: Identify,
   content: ParentNode = child,
   label = text(child),
+  tabImage?: HTMLImageElement | null,
 ): NativeUIItem | undefined => {
-  if (
-    !visible(child, isVerticalBarsSource(candidate.element)) ||
-    child.querySelector('input, button, a, img:not([data-native-ui-projection-node]), canvas, video, ion-spinner, ion-avatar')
-  )
-    return;
+  if (!visible(child, isVerticalBarsSource(candidate.element))) return;
+  const unsupported = 'input, button, a, img:not([data-native-ui-projection-node]), canvas, video, ion-spinner, ion-avatar';
+  if (tabImage) {
+    if (
+      Array.from(child.querySelectorAll(unsupported)).some(
+        (node) =>
+          node !== tabImage && !(node.localName === 'ion-avatar' && node === tabImage.parentElement && node.childElementCount === 1),
+      )
+    )
+      return;
+  } else if (child.querySelector(unsupported)) return;
   const icons = Array.from(content.querySelectorAll<HTMLElement>('ion-icon'));
   const directSVGs = Array.from(content.querySelectorAll<SVGElement>('svg'));
-  if (icons.length + directSVGs.length > 1) return undefined;
+  if (icons.length + directSVGs.length + (tabImage ? 1 : 0) > 1) return undefined;
   const svg = directSVGs[0] ?? icons[0]?.shadowRoot?.querySelector<SVGElement>('svg');
   if (icons.length && !svg) return undefined; // ion-icon has not finished loading.
   const labelElement = content.querySelector('[part="text"], ion-label') ?? child;
@@ -118,7 +125,7 @@ export const appendItem = (
       child.getAttribute('aria-label') ??
       native?.getAttribute('aria-label') ??
       (icons[0]?.getAttribute('aria-hidden') === 'true' ? null : icons[0]?.getAttribute('aria-label')) ??
-      label,
+      (label || (tabImage?.getAttribute('aria-hidden') !== 'true' && tabImage?.alt.trim()) || ''),
     disabled:
       !!(child as ItemElement).disabled ||
       !!(candidate.element as ItemElement).disabled ||
@@ -166,7 +173,7 @@ export const appendItem = (
       (parseFloat(style.paddingInlineEnd) || 0) + (parseFloat(style.borderInlineEndWidth) || 0) + (trailing || !label ? trailingMargin : 0);
     item.imagePadding = label && icon ? gap + (trailing ? leadingMargin : trailingMargin) : 0;
   }
-  if (!label && !svg) return undefined;
+  if (!label && !svg && !tabImage) return undefined;
   candidate.control.items.push(item);
   candidate.actions.set(item.id, child);
   return item;

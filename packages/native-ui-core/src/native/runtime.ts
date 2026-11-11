@@ -43,6 +43,7 @@ import { LIFECYCLE_WILL_ENTER, LIFECYCLE_WILL_LEAVE, LIFECYCLE_DID_ENTER, LIFECY
 import type { NativeUITransitionRelease } from '../native-integration/index.js';
 import { VERTICAL_BARS_TRANSITION_CANCELED, getNativeSearchBindings, setNativeUIIntegration } from '../native-integration/index.js';
 import { createSearchSupport } from './components/searchable-tabs.js';
+import { invalidateTabImage } from './components/tab-image.js';
 import type {
   NativeUIActivation,
   NativeUISnapshot,
@@ -1489,6 +1490,10 @@ export const createRuntime = async (
       schedule();
     }
   });
+  for (const name of ['load', 'error'])
+    on(doc, name, (event) => {
+      if (invalidateTabImage(event)) schedule();
+    });
   for (const name of [
     'ionChange',
     'ionSelect',

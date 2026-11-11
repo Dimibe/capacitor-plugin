@@ -112,6 +112,35 @@ const fixture = async (options: NativeUIRuntimeOptions = {}, publicEntry = false
   return { button, row, remove, removeTabs };
 };
 
+test('tab photo load and same-URL reload update the selected native item without changing its action ID', async () => {
+  await fixture();
+  const tab = document.querySelector('ion-tab-button')!;
+  Object.assign(tab, { selected: true });
+  const photo = document.createElement('img');
+  photo.src = '/profile.jpg';
+  Object.assign(photo.style, { visibility: 'visible', opacity: '1', transform: 'none' });
+  let loaded = false;
+  Object.defineProperties(photo, {
+    complete: { get: () => loaded },
+    naturalWidth: { get: () => (loaded ? 64 : 0) },
+    naturalHeight: { get: () => (loaded ? 64 : 0) },
+  });
+  photo.getBoundingClientRect = () => new DOMRect(10, 10, 24, 24);
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ drawImage() {} } as unknown as CanvasRenderingContext2D);
+  const encoded = vi.spyOn(HTMLCanvasElement.prototype, 'toDataURL');
+  tab.prepend(photo);
+  const item = () => bridge.update.mock.calls.at(-1)?.[0].controls.find((control) => control.kind === 'tab-bar')?.items[0];
+  await vi.waitFor(() => expect(item()).toMatchObject({ selected: true, label: 'Journal' }));
+  const id = item()!.id;
+  expect(item()?.icon).toBeUndefined();
+  loaded = true;
+  for (const icon of ['first', 'reloaded']) {
+    encoded.mockReturnValue(`data:image/png;base64,${icon}`);
+    photo.dispatchEvent(new Event('load'));
+    await vi.waitFor(() => expect(item()).toMatchObject({ id, selected: true, icon }));
+  }
+});
+
 test.each<NativeUIRuntimeOptions>([{}, { source: 'auto' }])(
   'pressing a content row does not reveal the projected toolbar; real updates still refresh it (%j)',
   async (options) => {

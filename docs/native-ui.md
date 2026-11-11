@@ -123,7 +123,7 @@ The table below describes the ordinary Native UI. Vertical Bars uses the separat
 | `ion-buttons`                                 | Fixed toolbar, two or more direct clear `ion-button` / `ion-menu-button` children sharing the theme glass | One `UIGlassEffect` surface with independent native buttons           |
 | `ion-back-button`                             | Standard icon and color in a fixed header/footer toolbar                                                  | Glass `UIButton`, using the resolved Ionic label/icon                 |
 | `ion-menu-button`                             | Fixed toolbar, inside the theme glass `ion-buttons`                                                       | Glass `UIButton`; original Ionic menu toggle                          |
-| `ion-tab-bar`                                 | Fixed tabs, icon-only/label-only items, one icon per item, dot/text badges, selection and disabled state  | `UITabBar` and `UITabBarItem`                                         |
+| `ion-tab-bar`                                 | Fixed tabs, one icon or photo per item, optional labels, dot/text badges, selection and disabled state    | `UITabBar` and `UITabBarItem`                                         |
 | `ion-segment`                                 | Fixed toolbar, non-scrollable, text **or** one icon per item                                              | `UISegmentedControl`                                                  |
 | `ion-fab` / `ion-fab-button` / `ion-fab-list` | Glass FAB in an `ion-content` fixed slot; one main button and optional directional lists                  | Persistent glass `UIButton` per button; one FAB synchronization group |
 
@@ -253,6 +253,19 @@ For forms, retain `ion-button type="submit"` and the form's existing submit hand
 ### Text and artwork
 
 Labels use native text. Local static SVGs and resolved `ion-icon` SVGs (including `name` and changes to `name`) are rasterized at the display scale and cached. Source projection preserves their colors; system projection of vertical toolbar buttons uses template icons tinted by SwiftUI. Tab SVGs that follow text color use native template rendering, so icons and labels change selection color together without waiting for another bridge image. Multicolor tab artwork retains its original colors. External references, `<use>`, animation, embedded HTML/images, SVG text and stylesheets are excluded. Web fonts and arbitrary slot layouts are not reproduced exactly.
+
+Tab buttons can also use one HTML `img`, directly or as the only child of an `ion-avatar`. Give it a display size. Native tabs preserve its colors in both selection states. Thumbnails support centered `object-fit: cover` or `contain`, the default stretch, and circular avatars. The longest side is capped at 128 physical pixels.
+
+```html
+<ion-tab-button tab="profile">
+  <ion-avatar style="width: 24px; height: 24px">
+    <img src="/photos/profile.jpg" alt="" />
+  </ion-avatar>
+  <ion-label>Profile</ion-label>
+</ion-tab-button>
+```
+
+The WebView draws a thumbnail from the loaded image. For cross-origin photos, set `crossorigin="anonymous"` and serve the image with a matching CORS response. A labeled tab keeps its label while the photo loads or if its pixels cannot be read. Image-only tabs need accessible text (`aria-label` on the tab or `alt` on the image) and stay on the Web until the image is available.
 
 ### Touch, badges and accessibility
 

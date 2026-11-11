@@ -1,5 +1,7 @@
 import { createCandidate, appendItem } from '../shared/candidate.js';
 import type { Candidate, Identify } from '../shared/candidate.js';
+import { isVerticalBarsSource, text, visible } from '../shared/dom.js';
+import { readTabImage, tabImageSelector } from './tab-image.js';
 
 export const tag = 'ion-tab-bar';
 export const shadowSelector = 'ion-tab-button';
@@ -32,11 +34,17 @@ export const read = (element: HTMLElement, id: Identify): Candidate | undefined 
   };
 
   for (const child of children) {
-    const item = appendItem(candidate, child, id);
+    const image = child.querySelector<HTMLImageElement>(tabImageSelector);
+    const item = appendItem(candidate, child, id, child, text(child), image);
     if (!item) return;
     // Read Ionic's applied selection color, after CSS inheritance and theme
     // resolution, rather than requiring a particular palette token or format.
     if (projectSelectionColor && item.selected && /^rgba?\(/.test(item.color)) candidate.control.tabTint = item.color;
+    if (image) {
+      if (visible(image, isVerticalBarsSource(element))) readTabImage(image, item);
+      if (!item.label && !(item.icon && item.accessibilityLabel)) return;
+      continue;
+    }
     const svg = child.querySelector<SVGElement>('svg') ?? child.querySelector('ion-icon')?.shadowRoot?.querySelector<SVGElement>('svg');
     if (svg) {
       item.iconPosition = 'top';
