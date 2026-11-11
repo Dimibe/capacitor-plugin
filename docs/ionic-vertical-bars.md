@@ -100,11 +100,11 @@ The adapter keeps the builder's animation targets, including any horizontal back
 
 Use [application startup and device layout](device-layout.md) to start the default `enableNativeUI()` runtime and connect Foldable's initial layout and `layoutChange` events. Apply the stylesheet and Ionic animation from steps 1 and 2 as this application's theme configuration.
 
-The application owner handles startup and disposal. The device module applies `edge`, `inset` and `toolbarTop` through the theme; Native UI owns projection and checks native availability. A null edge restores ordinary layout.
+Start Native UI once after the app shell renders. Pass device layout to the theme; Native UI handles projection. A null edge restores ordinary layout.
 
 ### Initial layout timing
 
-Run step 3 from your application bootstrap as soon as `ion-app` is mounted; do not wait for a routed page's data requests. `setVerticalBarsLayout()` needs that element to exist and does not save placement supplied before mounting. Keep device reporting in an application-owned service or integration module, separate from routed-page handlers. Keep startup and cleanup with the same application owner, as described in [application startup and device layout](device-layout.md).
+Run step 3 from your application bootstrap as soon as `ion-app` is mounted; do not wait for a routed page's data requests. `setVerticalBarsLayout()` needs that element to exist and does not save placement supplied before mounting. Connect device reporting in the app shell, as shown in [application startup and device layout](device-layout.md).
 
 Native startup, device placement and control rendering are asynchronous. Resolving `enableNativeUI()` gives you the runtime handle, not a guarantee that controls have already been projected. Starting promptly avoids application-added waiting, but the initial Web layout may still be visible before native projection.
 

@@ -6,19 +6,17 @@ title: Migration
 
 ## Simplify an existing iOS setup
 
-Earlier guide examples included application scaffolding that is unnecessary for the standard setup. Follow [the current installation guide](setup.md) when starting a new application.
+If you copied a `mountNativeUI()` wrapper from an earlier guide, remove it and its teardown wiring. After the app shell renders, call:
 
-| Earlier guide approach                                                               | Standard setup                                                                                                                         |
-| ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
-| Module-global `mountNativeUI()` lifecycle queue or native startup in page components | Start one default `enableNativeUI()` runtime from the application owner and dispose it with that owner.                                |
-| Handwritten page switches or a second navigation wrapper                             | Keep the application's Ionic routes; `ios27ThemeConfig` supplies the coordinated transition.                                           |
-| `controls: 'verticalOnly'` as installation boilerplate                               | Omit the option to enable ordinary controls and Vertical Bars together. Keep it only for an intentional rail-only selection.           |
-| Direct `getBarPlacement()` mapping with `barPlacementChange` alone                   | Connect `layoutChange` through `resolveVerticalBarsLayout(Foldable)` in the [device module](device-layout.md), including `toolbarTop`. |
-| Fixed `edge: 'trailing'` in device setup                                             | Use device-reported placement. Fixed placement is for an intentional browser preview.                                                  |
+```ts
+import { enableNativeUI } from '@rdlabo/capacitor-native-ui';
 
-Keep existing state and business handlers in the application. When replacing guide scaffolding, stop its old runtime and remove its device listener before starting the new owner. Keep a single device connection and a single Native UI runtime. Applications retaining a custom Web theme use [the existing-theme guide](ionic-vertical-bars.md).
+await enableNativeUI();
+```
 
-The selection, suspension and custom-navigation APIs remain available for applications that need them; they are reference APIs rather than installation prerequisites. The device-provider APIs remain valid; the resolver composes them instead of treating an edge-only notification as a complete layout update.
+Ordinary controls and Vertical Bars are enabled by default. Remove `controls: 'verticalOnly'` unless you intentionally want only the rail. Keep your Ionic routes and use `ios27ThemeConfig` for the theme configuration.
+
+For device layout, subscribe to Foldable's `layoutChange`, then apply the initial layout with `resolveVerticalBarsLayout(Foldable)` and `setVerticalBarsLayout`. This replaces direct `getBarPlacement()` mapping and includes `toolbarTop`. See the [startup and device layout examples](device-layout.md).
 
 ## Upgrading from 2.1.0
 

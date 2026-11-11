@@ -17,12 +17,12 @@ Use the theme's single stylesheet and `ios27ThemeConfig` preset, then start one 
 ```ts
 import { enableNativeUI } from '@rdlabo/capacitor-native-ui';
 
-const shell = await enableNativeUI();
+await enableNativeUI();
 ```
 
-**Vertical Bars is enabled by default**, together with ordinary controls. Connect the standard device-layout service; supported devices choose rail placement and other devices retain Web layout.
+**Vertical Bars is enabled by default**, together with ordinary controls. Connect device layout notifications; supported devices choose rail placement and other devices retain Web layout.
 
-Follow [Ionic setup](docs/setup.md) for the complete stylesheet, bootstrap, device service and native build steps. Keep another Web theme with [the existing-theme setup](docs/ionic-vertical-bars.md), or use [HTML setup](docs/framework-independent.md) without Ionic. Native UI does not own application state, routing or theme selection. The application owner destroys its handle when disposed.
+Follow [Ionic setup](docs/setup.md) for the complete stylesheet, startup, device layout and native build steps. Keep another Web theme with [the existing-theme setup](docs/ionic-vertical-bars.md), or use [HTML setup](docs/framework-independent.md) without Ionic. Native UI does not own application state, routing or theme selection.
 
 ## How projection works
 

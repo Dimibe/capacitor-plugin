@@ -44,14 +44,10 @@ After the app shell mounts, start the default runtime:
 ```ts
 import { enableNativeUI } from '@rdlabo/capacitor-native-ui';
 
-const shell = await enableNativeUI();
+await enableNativeUI();
 ```
 
-Connect [application startup and device layout](device-layout.md) as part of this step. Its application-owned module applies Foldable's initial layout and change events through the theme, so the default Vertical Bars layout follows the device.
-
-### Application lifetime
-
-The application bootstrap starts and stops Native UI. The device module owns its listener, the theme owns Web layout, and page components keep their normal state and handlers. The [Angular bootstrap](device-layout.md#angular-bootstrap) and [framework-independent application connection](device-layout.md#react-vue-and-other-application-owners) show the complete startup and disposal wiring.
+For Angular, call this after `bootstrapApplication` resolves. For React or Vue, call it after the app shell renders. Connect Foldable's initial layout and `layoutChange` notifications through `resolveVerticalBarsLayout` and the theme's `setVerticalBarsLayout`; see [startup and device layout examples](device-layout.md).
 
 ## 4. Build, sync, and run
 
