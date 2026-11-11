@@ -65,7 +65,33 @@ const shell = await enableNativeUI({
 });
 ```
 
-Call once after the source root exists. Keep the handle and call `await shell.destroy()` when that root is disposed. The plugin does not add page padding or safe-area rules; retain your application's CSS. For Angular, React, or Vue, use the [application startup and device layout](device-layout.md) with the `/core` import and your own layout callback. For animated navigation, use [suspension through completion and cancellation](native-ui.md#custom-overlay-suspension).
+Call once after the source root exists. The plugin does not add page padding or safe-area rules; retain your application's CSS. For Angular, React, or Vue, use the [application startup and device layout](device-layout.md) with the `/core` import and your own layout callback. For animated navigation, use [suspension through completion and cancellation](native-ui.md#custom-overlay-suspension).
+
+### Device placement for Vertical Bars
+
+Foldable is already included in the standard installation in step 1. Connect it to your application layout as follows.
+
+Reuse the runtime from step 3 **without `verticalBars.placement`**. Native UI then follows the device-reported edge; a fixed `edge: 'trailing'` would constrain it and can reject a device's leading rail.
+
+Follow [Foldable integration](https://webview-native-ui.com/projects/capacitor-native-ui/docs/vertical-bars#with-application-owned-css-or-without-ionic):
+
+1. Use Foldable 8.5 or later within version 8. At application startup, subscribe to `layoutChange` **before** the initial read, and resolve each report with `resolveVerticalBarsLayout(Foldable)` from `@rdlabo/capacitor-native-ui/integration`.
+2. Apply the resolver's `edge`, `inset` **and `toolbarTop`** through your application's existing layout state and CSS. Reserve the inset on the reported logical side and position the rail toolbar at the reported origin. Preserve your own defaults for undefined fields; do not invent device dimensions. A display change may alter `toolbarTop` without changing edge or inset, which is why the standard connection uses `layoutChange`.
+3. On a null or unavailable edge, restore ordinary spacing and call `shell.disableVerticalControlArea()`; when an edge returns, call `shell.enableVerticalControlArea()`. Serialize these changes with your application's layout updates.
+
+The resolver supplies values only: it neither subscribes nor writes CSS nor starts Native UI. Your application owns Web layout; Native UI owns control projection. No theme helper or theme stylesheet is required, and no device policy belongs in individual page business handlers.
+
+Keep the explicit source markers from step 2; they declare the controls and their requested placement. To project only Back, remove `data-native-ui="button"` from Add. `controls` does not disable explicit declarations. Without a Web rail host, unavailable native rail controls stay at their original Web positions. The theme package is not required.
+
+## 4. Build and run on iOS
+
+For CocoaPods projects, first complete the [native project setup](configuration.md#native-project-setup). SwiftPM resolves Engine automatically.
+
+Build your Web app, run `npx cap sync ios`, and launch the iOS project from Xcode. With the step 3 configuration, Add renders at its source position and invokes its original click handler. Back requests the device-reported native rail when available; the device connection from step 3 keeps Web spacing in sync. In a browser, the same button remains an ordinary Web button. Unmarked HTML remains unchanged.
+
+If a button stays on the Web on supported iOS, check that it is visible within the configured root, has an accessible name, and that the direct plugin dependency was synced and the iOS app rebuilt.
+
+In an app that also uses Ionic, set `ionic: { auto: false }` to project only explicit sources and registered extensions. See [selective Ionic projection](https://webview-native-ui.com/projects/capacitor-native-ui/docs/configuration#select-controls-explicitly-in-a-customized-ionic-app).
 
 ### Custom overlays
 
@@ -75,32 +101,9 @@ Before presenting a custom modal that makes the background non-interactive, call
 
 For a custom HTML theme, declare `color-scheme: light` or `color-scheme: dark` in the same CSS that selects your Web palette. Background colors alone do not select native appearance. See [Light and dark appearance](https://webview-native-ui.com/projects/capacitor-native-ui/docs/appearance) for a manual-toggle example, precedence when Ionic/theme variables are present, and shared rail behavior.
 
-## 4. Build and run on iOS
+### Applications that replace the source root
 
-For CocoaPods projects, first complete the [native project setup](configuration.md#native-project-setup). SwiftPM resolves Engine automatically.
-
-Build your Web app, run `npx cap sync ios`, and launch the iOS project from Xcode. With the step 3 configuration, Add renders at its source position and invokes its original click handler. Back requests the device-reported native rail when available; connect the device placement below to keep Web spacing in sync. In a browser, the same button remains an ordinary Web button. Unmarked HTML remains unchanged.
-
-If a button stays on the Web on supported iOS, check that it is visible within the configured root, has an accessible name, and that the direct plugin dependency was synced and the iOS app rebuilt.
-
-In an app that also uses Ionic, set `ionic: { auto: false }` to project only explicit sources and registered extensions. See [selective Ionic projection](https://webview-native-ui.com/projects/capacitor-native-ui/docs/configuration#select-controls-explicitly-in-a-customized-ionic-app).
-
-## Device placement for Vertical Bars
-
-Foldable is already included in the standard installation in step 1. Connect it to your application layout as follows.
-
-Reuse the runtime from step 3 **without `verticalBars.placement`**. Native UI then follows the device-reported edge; a fixed `edge: 'trailing'` would constrain it and can reject a device's leading rail.
-
-Follow [Foldable integration](https://webview-native-ui.com/projects/capacitor-native-ui/docs/vertical-bars#with-application-owned-css-or-without-ionic):
-
-1. Use Foldable 8.5 or later within version 8. In an application-owned service or integration module, subscribe to `layoutChange` **before** the initial read, and resolve each report with `resolveVerticalBarsLayout(Foldable)` from `@rdlabo/capacitor-native-ui/integration`. Keep the returned listener handle.
-2. Apply the resolver's `edge`, `inset` **and `toolbarTop`** through your application's existing layout state and CSS. Reserve the inset on the reported logical side and position the rail toolbar at the reported origin. Preserve your own defaults for undefined fields; do not invent device dimensions. A display change may alter `toolbarTop` without changing edge or inset, which is why the standard connection uses `layoutChange`.
-3. On a null or unavailable edge, restore ordinary spacing and call `shell.disableVerticalControlArea()`; when an edge returns, call `shell.enableVerticalControlArea()`. Serialize these changes with your application's layout updates.
-4. At application teardown, call `await listener.remove()` and destroy the runtime owned by this application.
-
-The resolver supplies values only: it neither subscribes nor writes CSS nor starts Native UI. Your application owns Web layout; Native UI owns control projection. No theme helper or theme stylesheet is required, and no device policy belongs in individual page business handlers.
-
-Keep the explicit source markers from step 2; they declare the controls and their requested placement. To project only Back, remove `data-native-ui="button"` from Add. `controls` does not disable explicit declarations. Without a Web rail host, unavailable native rail controls stay at their original Web positions. The theme package is not required.
+Only if your application unmounts or replaces this root, retain the Foldable listener handle and remove it before calling `await shell.destroy()`. See [runtime configuration](configuration.md#common-configurations) when replacing a runtime.
 
 ## Optional browser rail preview
 
