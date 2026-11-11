@@ -1,61 +1,40 @@
 # Capacitor Native UI
 
-Render supported Web controls with UIKit and SwiftUI on iOS while keeping your application state, routing, and handlers in the WebView. Use existing Ionic markup or explicit HTML buttons; custom SwiftUI or Android Compose content can be added through experimental app-local extensions.
+Capacitor Native UI provides native controls, device colors and custom native content for WebView applications.
 
-Native UI is opt-in. Standard controls on Android, browsers, older iOS, and unsupported controls retain Web presentation. Android supports experimental app-local Compose extensions. Keep your application's styles and layout; the iOS theme is optional.
+## Standard setup: iOS Native UI and Android Dynamic Color
 
-## Install from npm
-
-For the standard Ionic iOS setup, install Native UI, the iOS 27 theme and Foldable:
+Start here to configure both platform features in an Ionic app. The standard setup includes iPhone Duo / Vertical Bars and device-layout updates on iOS, and Material You colors on supported Android devices.
 
 ```sh
-npm install @rdlabo/capacitor-native-ui @rdlabo/ionic-theme-ios27 @erkamyaman/capacitor-foldable
+npm install @rdlabo/capacitor-native-ui @rdlabo/ionic-theme-ios27 @rdlabo/ionic-theme-md3 @erkamyaman/capacitor-foldable
 ```
 
-Use the theme's single stylesheet and `ios27ThemeConfig` preset, then start one runtime after the app shell mounts:
+Follow the [standard setup](docs/setup.md) for the theme presets, stylesheets and complete startup code.
 
-```ts
-import { enableNativeUI } from '@rdlabo/capacitor-native-ui';
+## Individual guides
 
-await enableNativeUI();
-```
+### 1. Use the plugin’s Native UI
 
-**Vertical Bars is enabled by default**, together with ordinary controls. Connect device layout notifications; supported devices choose rail placement and other devices retain Web layout.
+The plugin renders supported Ionic and HTML controls natively on iOS. Your application keeps its state, routing and handlers.
 
-Follow [Ionic setup](docs/setup.md) for the complete stylesheet, startup, device layout and native build steps. Keep another Web theme with [the existing-theme setup](docs/ionic-vertical-bars.md), or use [HTML setup](docs/framework-independent.md) without Ionic. Native UI does not own application state, routing or theme selection.
+| Your app                             | Guide                                               |
+| ------------------------------------ | --------------------------------------------------- |
+| Ionic with the standard iOS 27 theme | [Standard setup](docs/setup.md)                     |
+| Ionic with an existing Web theme     | [Existing-theme setup](docs/ionic-vertical-bars.md) |
+| HTML without Ionic                   | [HTML setup](docs/framework-independent.md)         |
 
-## How projection works
+#### How projection works
 
-A **projection** is another presentation of a Web control. Your application keeps the original DOM element, state and event handlers. The plugin reads supported labels, icons, selected/disabled state and geometry, then associates the rendered control with that source element. It does not convert the page into a native screen or run a second copy of your application.
+Native UI presents the original Web control natively while retaining its state and handlers. See [supported controls and projection behavior](docs/native-ui.md).
 
-| Web source                                      | Projected presentation                                                                    |
-| ----------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Supported Ionic buttons, tabs and segments      | Native UIKit/SwiftUI controls on supported iOS                                            |
-| Explicitly marked HTML buttons and back buttons | Native buttons on supported iOS                                                           |
-| Eligible controls placed in Vertical Bars       | SwiftUI controls in the available system rail; Web rail presentation otherwise            |
-| An app-local extension's DOM element            | The SwiftUI or Compose content registered by your app, using props read from that element |
+### 2. Use Dynamic Color
 
-The original element **stays in the DOM** while projected. Its bindings and handlers remain attached. Once native presentation is accepted, the runtime hides the source visually, prevents direct pointer interaction and hides it from Web accessibility so there are not two interactive copies. Element projection retains the source's layout box; rail spacing is supplied by your app or theme. A Web rail similarly uses its adapter's Web presentation: Ionic layout/clones or HTML proxy buttons in your `webHost`.
+Read Android’s device palette and apply it through your theme. Use the [Dynamic Color guide](docs/dynamic-colors.md) for this feature on its own, appearance preferences and color mapping.
 
-For example, tapping a projected Save button activates the original Web button. Its existing handler performs the save and updates application state; supported DOM changes then update the projection. Tabs and other controls likewise route actions through their source adapters. Continue updating the source, rather than managing separate native state. For reader values that change without a DOM mutation, use `markForCheck()`.
+### 3. Build your own Native UI
 
-Projection changes presentation; it does not translate arbitrary HTML or CSS into native views. Native controls use supported data and styling; a custom Web appearance is not guaranteed to be reproduced. Removing or disabling a source prevents further valid actions. If projection is unavailable or stopped, the runtime releases its hiding state and the source returns to Web presentation, or to an available Web rail. Your application's own hidden/disabled state still applies.
-
-Native ownership follows the source and its projection context, independently of animation and image availability. Modal presentation, dragging, resizing, and image restoration do not transfer an accepted source to Web while its projection remains eligible. An explicit Web handover, unsupported or rejected projection, runtime failure, or the end of the source/context releases it. A disabled button remains the same Native-owned control with disabled input.
-
-Blocking Web overlays can keep prepared images of native buttons, segments, FABs and tab bars beneath their backdrop. Images retain the captured native appearance and are prepared after native updates and coalesced visual changes. Platform capture can differ from live compositing, including Liquid Glass edge highlights; pixel-identical material reproduction is not guaranteed. Preparation pauses during touch; presentation uses the last completed image without waiting for capture or a bridge acknowledgement. A missing image does not release an accepted Native source to Web. Native popovers that retain their controls keep the native route. See [the handoff rules](https://webview-native-ui.com/projects/capacitor-native-ui/docs/appearance#temporary-images-beneath-web-overlays) for movement, restoration and exclusions. Rebuild the native app to enable this capability; older native binaries keep their existing route.
-
-## Choose what to build
-
-| Goal                                                | Start here                                                                                                                  |
-| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| Render existing Ionic controls natively             | [Ionic setup](https://webview-native-ui.com/projects/capacitor-native-ui/docs/setup)                                        |
-| Use native buttons without Ionic                    | [HTML setup](https://webview-native-ui.com/projects/capacitor-native-ui/docs/framework-independent)                         |
-| Keep another Ionic theme with Vertical Bars         | [Vertical Bars step by step](https://webview-native-ui.com/projects/capacitor-native-ui/docs/ionic-vertical-bars)           |
-| Use Vertical Bars without Ionic                     | [HTML rail setup](https://webview-native-ui.com/projects/capacitor-native-ui/docs/framework-independent)                    |
-| Add native controls to an existing iOS 27 theme app | [Add Native UI to your theme](https://webview-native-ui.com/projects/ionic-theme-ios27/docs/add-native-ui)                  |
-| Read Android Material You colors                    | [Android dynamic colors](docs/dynamic-colors.md)                                                                            |
-| Render custom SwiftUI or Android Compose content    | [App-local extensions (experimental)](https://webview-native-ui.com/projects/capacitor-native-ui/docs/native-ui-extensions) |
+Render your own SwiftUI or Android Compose content through [app-local extensions](docs/native-ui-extensions.md). This feature is experimental.
 
 ## Requirements
 
@@ -124,18 +103,3 @@ Add `https://github.com/webview-native-ui/capacitor-plugin.git` in Xcode and sel
 Capacitor apps continue to use the `RdlaboCapacitorNativeUi` product and `import NativeUIPlugin`. That module re-exports Core, so existing `NativeUI.register` calls keep using the same registration state as the adapter. The root manifest owns both targets; there is no separate nested Swift package.
 
 CocoaPods continues to compile the adapter and shared sources into the existing plugin pod. This change does not publish a standalone Core pod or implement a Cordova adapter.
-
-## Android dynamic colors
-
-Read Android 12+ Material You colors with `getDynamicColorScheme()` and observe
-resume/configuration notifications with `addDynamicColorListener()`. Import both
-from `@rdlabo/capacitor-native-ui`. Dynamic colors are a supported, opt-in API,
-independent of Native UI projection and experimental app-local extensions.
-
-The plugin returns light and dark schemes without changing the Activity theme or
-requesting wallpaper permissions. Other platforms report `available: false`.
-The plugin does not apply CSS; Ionic applications can use
-`enableDynamicColors` from `@rdlabo/ionic-theme-md3/dynamic-colors`.
-
-See [Android dynamic colors](docs/dynamic-colors.md) for installation, API contracts,
-change notifications, cleanup, and Ionic integration.
