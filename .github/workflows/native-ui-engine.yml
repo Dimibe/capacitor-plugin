@@ -35,9 +35,10 @@ jobs:
           POPOVER_CLOSE=NativeUIPluginTests/NativeUISnapshotTests/testNativePopoverClosureNotifiesWebBeforeReopening
           POPOVER_REPLACE=NativeUIPluginTests/NativeUISnapshotTests/testPopoverReopensAfterPresentationIdentityKeepsReplacedSource
           COVERED_ORIENTATION=NativeUIPluginTests/NativeUIPluginLifecycleTests/testOrientationPreservesCoveredControlsUntilRestore
-          xcodebuild -scheme RdlaboCapacitorNativeUi-Package -destination "platform=iOS Simulator,id=$DEVICE" CODE_SIGNING_ALLOWED=NO -clonedSourcePackagesDirPath "$RUNNER_TEMP/native-ui-spm" -skip-testing:"$POPOVER_CLOSE" -skip-testing:"$POPOVER_REPLACE" -skip-testing:"$COVERED_ORIENTATION" test
+          CAPTURE_INTERACTION=NativeUIPluginTests/NativeUIPluginLifecycleTests/testSnapshotInteractionForwardsEnginePayloadToCapacitor
+          xcodebuild -scheme RdlaboCapacitorNativeUi-Package -destination "platform=iOS Simulator,id=$DEVICE" CODE_SIGNING_ALLOWED=NO -clonedSourcePackagesDirPath "$RUNNER_TEMP/native-ui-spm" -skip-testing:"$POPOVER_CLOSE" -skip-testing:"$POPOVER_REPLACE" -skip-testing:"$COVERED_ORIENTATION" -skip-testing:"$CAPTURE_INTERACTION" test
           cd ios/Tests
-          xcodebuild -project NativeUIHostedTests.xcodeproj -scheme NativeUIHostedTests -destination "platform=iOS Simulator,id=$DEVICE" CODE_SIGNING_ALLOWED=NO -clonedSourcePackagesDirPath "$RUNNER_TEMP/native-ui-spm" -only-testing:"$POPOVER_CLOSE" -only-testing:"$POPOVER_REPLACE" -only-testing:"$COVERED_ORIENTATION" test
+          xcodebuild -project NativeUIHostedTests.xcodeproj -scheme NativeUIHostedTests -destination "platform=iOS Simulator,id=$DEVICE" CODE_SIGNING_ALLOWED=NO -clonedSourcePackagesDirPath "$RUNNER_TEMP/native-ui-spm" -only-testing:"$POPOVER_CLOSE" -only-testing:"$POPOVER_REPLACE" -only-testing:"$COVERED_ORIENTATION" -only-testing:"$CAPTURE_INTERACTION" test
   android:
     runs-on: ubuntu-latest
     steps:

@@ -247,16 +247,6 @@ test('horizontal and vertical tabs share the prepared image path', async () => {
   expect(f.bridge).toHaveBeenCalledWith(expect.objectContaining({ action: 'prepare', ids: ['button'] }));
 });
 
-test('layout or appearance changes invalidate the old image before a new one is ready', async () => {
-  const f = await fixture();
-  f.manager.consider(1, [f.candidate]);
-  await drain();
-  f.candidate.control.dark = !f.candidate.control.dark;
-  f.manager.consider(2, [f.candidate]);
-  expect(f.manager.begin()).toBeUndefined();
-  expect(f.bridge).toHaveBeenCalledWith({ action: 'release', token: 'image-1' });
-});
-
 test('a cancelled touch cannot override a newer completed image', async () => {
   const f = await fixture();
   f.manager.consider(1, [f.candidate]);

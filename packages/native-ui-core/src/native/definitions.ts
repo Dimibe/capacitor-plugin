@@ -1,4 +1,4 @@
-import type { WebProjectionTransport } from '@webview-native-ui/engine';
+import type { WebProjectionInteraction, WebProjectionTransport } from '@webview-native-ui/engine';
 import type { NativeUIExtension } from './extensions.js';
 import type { PluginListenerHandle } from '../host.js';
 
@@ -320,7 +320,7 @@ export interface NativeUIPlugin {
   }>;
   setToolbarTransitionProgress(options: { id: number; progress: number }): Promise<void>;
   clear(options: { revision: number }): Promise<void>;
-  addListener(name: 'snapshotInteraction', listener: (event: { active: boolean }) => void): Promise<PluginListenerHandle>;
+  addListener(name: 'snapshotInteraction', listener: (event: WebProjectionInteraction) => void): Promise<PluginListenerHandle>;
   addListener(name: 'activate', listener: (event: NativeUIActivation) => void): Promise<PluginListenerHandle>;
   addListener(name: 'search', listener: (event: NativeUISearchEvent) => void): Promise<PluginListenerHandle>;
   addListener(name: 'webViewMetricsChange', listener: (event: WebViewMetrics) => void): Promise<PluginListenerHandle>;

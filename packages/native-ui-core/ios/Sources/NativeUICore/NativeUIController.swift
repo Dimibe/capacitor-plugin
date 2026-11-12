@@ -255,8 +255,8 @@ public final class NativeUIController: NSObject, UITabBarDelegate {
         DispatchQueue.main.async { [weak self] in
             guard let self, let webView = self.environment.webView() else { call.reject("WebView unavailable"); return }
             if call.getString("action") == "prepare", let window = webView.window {
-                self.coveredSnapshots.observe(window) { [weak self] active in
-                    self?.notifyListeners("snapshotInteraction", data: ["active": active])
+                self.coveredSnapshots.observeInteractions(window) { [weak self] event in
+                    self?.notifyListeners("snapshotInteraction", data: event)
                 }
             }
             var captureAnchors: [String: CGRect] = [:]
